@@ -5,10 +5,11 @@ import dotenv from 'dotenv';
 import {initDB} from './lib/db.js';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
+import {app, server} from "./lib/socket.js"
 
 dotenv.config();
 
-const app = express();
+
 const PORT = process.env.PORT || 5001;
 
 app.use(express.json());
@@ -28,7 +29,7 @@ async function startServer() {
     console.log("MongoDB connected");
 
     // 2️⃣ Start server ONLY after DB is ready
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
   } catch (error) {
