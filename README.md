@@ -77,7 +77,7 @@ The application implements several security best practices:
 1.  **Clone the repository**
     ```bash
     git clone https://github.com/harihara-1869/Chat-App.git
-    cd "Chat App/mine"
+    cd "Chat App"
     ```
 
 2.  **Backend Setup**
@@ -111,9 +111,6 @@ The application implements several security best practices:
 
 4.  **Access the App**
     Open `http://localhost:5173` in your browser.
-
-> [!NOTE]
-> If you encounter git push errors about "rejected" updates, it means the remote repo has changes you don't have. Run `git pull origin main --rebase` to sync before pushing.
 
 ---
 
