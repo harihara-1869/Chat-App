@@ -36,7 +36,7 @@ export const signup = async (req, res) => {
 
     // Generate verification token
     const verificationToken = crypto.randomBytes(32).toString("hex");
-    const verificationTokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+    const verificationTokenExpiresAt = Date.now() + 3 * 60 * 60 * 1000; // 3 hours
 
     const newUser = new User({
       fullName,
