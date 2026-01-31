@@ -64,6 +64,14 @@ export const login = async (req, res) => {
     if (!user) {
       return res.status(400).json({ message: "Invalid email or password." });
     }
+
+    // Check if user registered via Google (no password set)
+    if (user.provider === "google" && !user.password) {
+      return res.status(400).json({
+        message: "This account uses Google login. Please sign in with Google."
+      });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid email or password." });
@@ -118,10 +126,32 @@ export const updateProfile = async (req, res) => {
 };
 
 export const getUserInfo = async (req, res) => {
-  try{
+  try {
     res.status(200).json(req.user);
-  }catch(error){
+  } catch (error) {
     console.log("error in get user info:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 }
+
+// Google OAuth callback handler
+export const googleCallback = (req, res) => {
+  try {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    // User is already authenticated by Passport at this point (req.user is set)
+    if (!req.user) {
+      return res.redirect(`${frontendUrl}/login?error=auth_failed`);
+    }
+
+    // Generate JWT token
+    generateToken(req.user._id, res);
+
+    // Redirect to frontend
+    res.redirect(frontendUrl);
+  } catch (error) {
+    console.error("Error during Google OAuth callback:", error);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    res.redirect(`${frontendUrl}/login?error=server_error`);
+  }
+};

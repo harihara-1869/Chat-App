@@ -11,10 +11,12 @@ import { LoginPage } from '../../pages/LoginPage';
 
 // Mock the auth store
 const mockLogin = vi.fn();
+const mockGoogleLogin = vi.fn();
 vi.mock('../../store/useAuthStore', () => ({
     useAuthStore: vi.fn(() => ({
         login: mockLogin,
-        isLoggingIn: false
+        isLoggingIn: false,
+        googleLogin: mockGoogleLogin
     }))
 }));
 
@@ -43,7 +45,8 @@ describe('LoginPage', () => {
         vi.clearAllMocks();
         useAuthStore.mockReturnValue({
             login: mockLogin,
-            isLoggingIn: false
+            isLoggingIn: false,
+            googleLogin: mockGoogleLogin
         });
     });
 
@@ -56,7 +59,7 @@ describe('LoginPage', () => {
             expect(screen.getByText('Welcome Back')).toBeInTheDocument();
             expect(screen.getByPlaceholderText('you@example.com')).toBeInTheDocument();
             expect(screen.getByPlaceholderText('••••••••')).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /^sign in$/i })).toBeInTheDocument();
         });
 
         it('should render link to signup page', () => {
@@ -74,7 +77,8 @@ describe('LoginPage', () => {
             // Arrange
             useAuthStore.mockReturnValue({
                 login: mockLogin,
-                isLoggingIn: true
+                isLoggingIn: true,
+                googleLogin: mockGoogleLogin
             });
 
             // Act
@@ -95,7 +99,7 @@ describe('LoginPage', () => {
             // Act
             await user.type(screen.getByPlaceholderText('you@example.com'), 'test@example.com');
             await user.type(screen.getByPlaceholderText('••••••••'), 'password123');
-            await user.click(screen.getByRole('button', { name: /sign in/i }));
+            await user.click(screen.getByRole('button', { name: /^sign in$/i }));
 
             // Assert
             expect(mockLogin).toHaveBeenCalledWith({
