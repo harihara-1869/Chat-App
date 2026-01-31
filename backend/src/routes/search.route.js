@@ -29,9 +29,11 @@ router.get("/", protectRoute, async (req, res) => {
                 .select("_id fullName profilePic")
                 .limit(1);
         } else {
+            // Escape special regex characters to prevent ReDoS attacks
+            const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             users = await User.find({
                 _id: { $ne: userId },
-                fullName: { $regex: trimmed, $options: "i" },
+                fullName: { $regex: escaped, $options: "i" },
             })
                 .select("_id fullName profilePic")
                 .limit(10);
