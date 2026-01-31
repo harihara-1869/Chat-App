@@ -1,6 +1,6 @@
 # Real-Time Chat Application
 
-A full-stack real-time chat application built with the MERN stack (MongoDB, Express, React, Node.js) and Socket.io. Features secure authentication, real-time messaging, image sharing, and a modern responsive UI.
+A full-stack real-time chat application built with the MERN stack (MongoDB, Express, React, Node.js) and Socket.io. Features secure authentication, real-time messaging, image sharing, friend system, and a modern responsive UI.
 
 ## 🚀 Project Information
 
@@ -13,11 +13,13 @@ A full-stack real-time chat application built with the MERN stack (MongoDB, Expr
 - **Testing:** Jest (Backend), Vitest (Frontend)
 
 ### Key Features
-- 🔐 **Secure Authentication:** User signup, login, and logout with HttpOnly cookies.
-- 💬 **Real-time Messaging:** Instant message delivery using Socket.io.
+- 🔐 **Secure Authentication:** User signup, login, google oauth and logout with HttpOnly cookies.
+- 👥 **Friend System:** Search users, send friend requests, and manage friends.
+- 💬 **Real-time Messaging:** Chat only with friends using Socket.io.
 - 🟢 **Online Status:** Real-time online/offline user status updates.
 - 🖼️ **Image Sharing:** Upload and share images in chat via Cloudinary.
 - 🎨 **Theming:** Multiple color themes support (coffee, dark, etc.).
+- 🛡️ **Enhanced Security:** Rate limiting, regex protection, and payload limits.
 - 📱 **Responsive Design:** Mobile-friendly interface.
 
 ---
@@ -35,17 +37,32 @@ A full-stack real-time chat application built with the MERN stack (MongoDB, Expr
 | `PUT` | `/update-profile` | Update profile picture | **Yes** |
 | `GET` | `/get-user` | Get current authenticated user info | **Yes** |
 
+#### Friends (`/api/friend`)
+| Method | Endpoint | Description | Protected |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/request/:userId` | Send friend request | **Yes** |
+| `GET` | `/requests/pending` | Get received pending requests | **Yes** |
+| `POST` | `/accept/:requestId` | Accept friend request | **Yes** |
+| `POST` | `/reject/:requestId` | Reject friend request | **Yes** |
+| `GET` | `/friends` | Get list of friends | **Yes** |
+
+#### Search (`/api/search`)
+| Method | Endpoint | Description | Protected |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/?q={query}` | Search users by name or email | **Yes** |
+
 #### Messages (`/api/message`)
 | Method | Endpoint | Description | Protected |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/users` | Get list of users for sidebar (excluding self) | **Yes** |
-| `GET` | `/:id` | Get message history with a specific user | **Yes** |
-| `POST` | `/send/:id` | Send a message/image to a user | **Yes** |
+| `GET` | `/users` | Get list of sidebar users (friends) | **Yes** |
+| `GET` | `/:id` | Get message history (Friends only) | **Yes** |
+| `POST` | `/send/:id` | Send message/image (Friends only) | **Yes** |
 
 ### Frontend Routes
 | Path | Component | Description |
 | :--- | :--- | :--- |
 | `/` | `HomePage` | Main chat interface (Protected) |
+| `/friends` | `FriendsPage` | Find users and manage requests |
 | `/signup` | `SignUpPage` | User registration |
 | `/login` | `LoginPage` | User login |
 | `/settings` | `SettingsPage` | Theme selection settings |
@@ -55,13 +72,15 @@ A full-stack real-time chat application built with the MERN stack (MongoDB, Expr
 
 ## 🛡️ Security System
 
-The application implements several security best practices:
+The application implements robust security best practices:
 
-1.  **JWT Authentication:** Uses JSON Web Tokens stored in **HttpOnly cookies** to prevent XSS attacks (client-side script cannot access the token).
-2.  **Password Hashing:** User passwords are hashed using `bcryptjs` before storage.
-3.  **Protected Routes (Middleware):** Backend API endpoints are protected by `protectRoute` middleware that validates the JWT.
-4.  **CORS Policy:** Configured to allow requests only from the trusted frontend origin (`FRONTEND_URL`).
-5.  **Environment Variables:** Sensitive data (API keys, secrets) are stored in `.env` files and never committed to version control.
+1.  **JWT Authentication:** HttpOnly cookies to prevent XSS.
+2.  **Rate Limiting:** Applied to all API routes to prevent abuse/brute-force.
+3.  **Regex Protection:** User input escaped in search queries to prevent ReDoS.
+4.  **Friend-Only Messaging:** Middleware (`isFriend`) restricts chat access.
+5.  **Payload Limits:** JSON body limit (10MB) to prevent large payload attacks.
+6.  **CORS Policy:** Strict origin restriction to `FRONTEND_URL`.
+7.  **Data Sanitization:** Inputs validated and sanitized.
 
 ---
 
@@ -95,6 +114,8 @@ The application implements several security best practices:
       CLOUDINARY_CLOUD_NAME=your_cloud_name
       CLOUDINARY_API_KEY=your_api_key
       CLOUDINARY_API_SECRET=your_api_secret
+      GOOGLE_CLIENT_ID=your_google_client_id
+      GOOGLE_CLIENT_SECRET=your_google_client_secret
       ```
     - Start the server:
       ```bash
@@ -124,7 +145,6 @@ Tests cover controllers, middleware, and utility functions.
 cd backend
 npm test
 ```
-*Current Status: 39 tests passing*
 
 ### Frontend Tests (Vitest)
 Tests cover stores, pages, components, and utilities using React Testing Library.
@@ -132,7 +152,6 @@ Tests cover stores, pages, components, and utilities using React Testing Library
 cd frontend
 npm test
 ```
-*Current Status: 49 tests passing*
 
 ### Running All Tests
 To ensure system stability, run both suites before pushing major changes.
