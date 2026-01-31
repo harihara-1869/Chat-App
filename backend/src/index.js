@@ -2,6 +2,7 @@ import express from 'express';
 import authRoutes from './routes/auth.route.js';
 import messageRoutes from './routes/message.route.js';
 import friendRoutes from './routes/friend.route.js'
+import searchRoutes from './routes/search.route.js'
 import dotenv from 'dotenv';
 import { initDB } from './lib/db.js';
 import cookieParser from 'cookie-parser';
@@ -30,6 +31,7 @@ app.set('trust proxy', 1);
 app.use("/api/auth", authRoutes)
 app.use("/api/message", messageRoutes)
 app.use("/api/friend", friendRoutes)
+app.use("/api/search", searchRoutes)
 
 async function startServer() {
   try {

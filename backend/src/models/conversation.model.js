@@ -22,5 +22,11 @@ conversationSchema.index(
   { unique: true }
 );
 
+conversationSchema.pre("deleteOne", async function (next) {
+  await Message.deleteMany({ conversationId: this._id });
+  next();
+});
+
+
 const Conversation = mongoose.model("Conversation", conversationSchema);
 export default Conversation;
