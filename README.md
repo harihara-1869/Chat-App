@@ -77,7 +77,7 @@ The application implements several security best practices:
 1.  **Clone the repository**
     ```bash
     git clone https://github.com/harihara-1869/Chat-App.git
-    cd "Chat App"
+    cd "Chat-App"
     ```
 
 2.  **Backend Setup**
