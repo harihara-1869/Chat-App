@@ -1,10 +1,13 @@
 import React from "react";
 import { useAuthStore } from "../store/useAuthStore";
+import { useFriendStore } from "../store/useFriendStore";
 import { Link } from "react-router-dom";
-import { LogOut, MessageSquare, Settings, User } from "lucide-react";
+import { LogOut, MessageSquare, Settings, User, Users } from "lucide-react";
 
 export const Navbar = () => {
   const { logout, authUser } = useAuthStore();
+  const { pendingRequests } = useFriendStore();
+
   return (
     <header className="bg-base-100 border-b border-base-300 fixed w-full top-0 z-40 backdrop-blur-lg bg-base-100/80">
       <div className="container mx-auto px-4 h-16">
@@ -22,6 +25,19 @@ export const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {authUser && (
+              <Link
+                to={"/friends"}
+                className={`btn btn-sm gap-2 transition-colors`}
+              >
+                <Users className="w-4 h-4" />
+                <span className="hidden sm:inline">Friends</span>
+                {pendingRequests.length > 0 && (
+                  <span className="badge badge-sm badge-error">{pendingRequests.length}</span>
+                )}
+              </Link>
+            )}
+
             <Link
               to={"/settings"}
               className={`btn btn-sm gap-2 transition-colors`}

@@ -5,6 +5,7 @@ import { SignUpPage } from "./pages/SignUpPage";
 import { LoginPage } from "./pages/LoginPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { FriendsPage } from "./pages/FriendsPage";
 import { Navbar } from "./components/Navbar";
 import { useAuthStore } from "./store/useAuthStore";
 import { useThemeStore } from "./store/useThemeStore";
@@ -13,10 +14,10 @@ import { Toaster } from "react-hot-toast";
 
 function App() {
   const { authUser, checkAuth, isCheckingAuth, onlineUsers } = useAuthStore();
-  const {theme} = useThemeStore();
+  const { theme } = useThemeStore();
 
   console.log(onlineUsers)
-  
+
   React.useEffect(() => {
     checkAuth();
   }, [checkAuth]);
@@ -36,6 +37,7 @@ function App() {
         <Route path="/login" element={!authUser ? <LoginPage /> : <HomePage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/profile" element={authUser ? <ProfilePage /> : <LoginPage />} />
+        <Route path="/friends" element={authUser ? <FriendsPage /> : <LoginPage />} />
       </Routes>
 
       <Toaster />
@@ -44,3 +46,4 @@ function App() {
 }
 
 export default App;
+
