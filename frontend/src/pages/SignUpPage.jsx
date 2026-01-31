@@ -20,6 +20,7 @@ export const SignUpPage = () => {
     email: "",
     password: "",
   });
+  const [isSignupSuccess, setIsSignupSuccess] = React.useState(false);
 
   const { signup, isSigningUp, googleLogin } = useAuthStore();
 
@@ -34,12 +35,50 @@ export const SignUpPage = () => {
 
     return true;
   };
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const isValid = validateForm();
-    if (isValid) signup(formData);
+    if (isValid) {
+      const success = await signup(formData);
+      if (success) {
+        setIsSignupSuccess(true);
+      }
+    }
   };
+
+  if (isSignupSuccess) {
+    return (
+      <div className="min-h-screen grid lg:grid-cols-2">
+        <div className="flex flex-col justify-center items-center p-6 sm:p-12">
+          <div className="w-full max-w-md space-y-8 text-center">
+            <div className="flex justify-center">
+              <div className="size-20 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Mail className="size-10 text-primary" />
+              </div>
+            </div>
+            <h1 className="text-2xl font-bold">Check Your Email</h1>
+            <p className="text-base-content/60">
+              We&apos;ve sent a verification link to <span className="font-semibold">{formData.email}</span>.
+            </p>
+            <p className="text-base-content/60">
+              Please click the link in the email to verify your account and start using Talkio.
+            </p>
+
+            <div className="pt-4">
+              <Link to="/login" className="btn btn-outline w-full">
+                Back to Login
+              </Link>
+            </div>
+          </div>
+        </div>
+        <AuthImagePattern
+          title="Verify your email"
+          subtitle="Join our community by verifying your email address."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">

@@ -2,6 +2,8 @@ import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../lib/utils.js";
 import cloudinary from "../lib/cloudinary.js";
+import { sendVerificationEmail } from "../lib/mailgun.js";
+import crypto from "crypto";
 
 export const signup = async (req, res) => {
   const { fullName, email, password } = req.body;
@@ -32,17 +34,27 @@ export const signup = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const verificationTokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+
     const newUser = new User({
       fullName,
       email,
       password: hashedPassword,
+      verificationToken,
+      verificationTokenExpiresAt,
+      emailVerified: false,
     });
 
     if (newUser) {
-      //generate JWT token
-      generateToken(newUser._id, res);
       await newUser.save();
+
+      // Send verification email
+      await sendVerificationEmail(newUser.email, verificationToken);
+
       return res.status(201).json({
+        message: "Account created! Please verify your email to log in.",
         _id: newUser._id,
         fullName: newUser.fullName,
         email: newUser.email,
@@ -72,6 +84,11 @@ export const login = async (req, res) => {
       });
     }
 
+    // Check if email is verified
+    if (!user.emailVerified) {
+      return res.status(403).json({ message: "Please verify your email address before logging in." });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid email or password." });
@@ -86,6 +103,44 @@ export const login = async (req, res) => {
   } catch (error) {
     console.error("Error during login:", error);
     return res.status(500).json({ message: "Server error during login." });
+  }
+};
+
+export const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ message: "Verification token is required" });
+    }
+
+    const user = await User.findOne({
+      verificationToken: token,
+      verificationTokenExpiresAt: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired verification token" });
+    }
+
+    user.emailVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpiresAt = undefined;
+    await user.save();
+
+    // Login user immediately after verification
+    generateToken(user._id, res);
+
+    return res.status(200).json({
+      message: "Email verified successfully",
+      _id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      profilePic: user.profilePic || null,
+    });
+  } catch (error) {
+    console.error("Error verifying email:", error);
+    return res.status(500).json({ message: "Server error during email verification" });
   }
 };
 

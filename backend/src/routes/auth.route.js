@@ -1,6 +1,6 @@
 import express from 'express';
 import passport from '../lib/passport.js';
-import { login, logout, signup, updateProfile, getUserInfo, googleCallback } from '../controllers/auth.controller.js';
+import { login, logout, signup, updateProfile, getUserInfo, googleCallback, verifyEmail } from '../controllers/auth.controller.js';
 import { protectRoute } from '../middleware/auth.middleware.js';
 import { authRateLimiter } from '../middleware/rateLimit.middleware.js';
 
@@ -10,6 +10,8 @@ const router = express.Router();
 router.post('/signup', authRateLimiter, signup)
 
 router.post('/login', authRateLimiter, login)
+
+router.post('/verify-email', authRateLimiter, verifyEmail);
 
 router.post('/logout', logout)
 
