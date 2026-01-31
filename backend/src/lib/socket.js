@@ -14,7 +14,9 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: process.env.FRONTEND_URL || "http://localhost:5173",
-    credentials: true, // Allow cookies to be sent
+    credentials: true, // Allow cookies to be sent,
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   },
 });
 
