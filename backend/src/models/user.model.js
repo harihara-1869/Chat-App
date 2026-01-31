@@ -36,6 +36,12 @@ const userSchema = new mongoose.Schema(
       },
       minLength: 6,
     },
+    friends: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ]
   },
   { timestamps: true }
 );

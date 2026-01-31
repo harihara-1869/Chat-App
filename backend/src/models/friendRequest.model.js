@@ -1,0 +1,39 @@
+import mongoose from "mongoose";
+
+const friendRequestSchema = new mongoose.Schema(
+  {
+    senderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    receiverId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    status: {
+      type: String,
+      enum: ['pending', 'accepted', 'rejected'],
+      default: 'pending',
+    }
+  }, {timestamps: true}
+)
+
+friendRequestSchema.index(
+  { senderId: 1, receiverId: 1 },
+  { unique: true }
+);
+
+//blocking self friend request 
+friendRequestSchema.pre("save", function (next) {
+  if (this.senderId.equals(this.receiverId)) {
+    return next(new Error("Cannot send friend request to yourself"));
+  }
+  next();
+});
+
+
+export default mongoose.model("FriendRequest", friendRequestSchema);
