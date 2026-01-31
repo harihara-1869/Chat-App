@@ -86,9 +86,10 @@ describe('useAuthStore', () => {
     });
 
     describe('signup', () => {
-        it('should set authUser on successful signup', async () => {
+        it('should return true and NOT set authUser on successful signup (email verification required)', async () => {
             // Arrange
-            const mockUser = {
+            const mockResponse = {
+                message: "Account created! Please verify your email to log in.",
                 _id: 'user-123',
                 fullName: 'New User',
                 email: 'new@example.com'
@@ -98,16 +99,17 @@ describe('useAuthStore', () => {
                 email: 'new@example.com',
                 password: 'password123'
             };
-            axiosInstance.post.mockResolvedValue({ data: mockUser });
+            axiosInstance.post.mockResolvedValue({ data: mockResponse });
 
             // Act
-            await useAuthStore.getState().signup(signupData);
+            const result = await useAuthStore.getState().signup(signupData);
 
-            // Assert
+            // Assert - With email verification, signup does NOT set authUser
             expect(axiosInstance.post).toHaveBeenCalledWith('/auth/signup', signupData);
-            expect(useAuthStore.getState().authUser).toEqual(mockUser);
+            expect(result).toBe(true); // Returns success indicator
+            expect(useAuthStore.getState().authUser).toBeNull(); // NOT logged in
             expect(useAuthStore.getState().isSigningUp).toBe(false);
-            expect(toast.success).toHaveBeenCalledWith('Signup successful!');
+            expect(toast.success).toHaveBeenCalled();
         });
 
         it('should show error toast on signup failure', async () => {
@@ -116,10 +118,11 @@ describe('useAuthStore', () => {
             axiosInstance.post.mockRejectedValue(error);
 
             // Act
-            await useAuthStore.getState().signup({ email: 'existing@example.com' });
+            const result = await useAuthStore.getState().signup({ email: 'existing@example.com' });
 
             // Assert
             expect(toast.error).toHaveBeenCalledWith('Email already exists');
+            expect(result).toBe(false);
             expect(useAuthStore.getState().authUser).toBeNull();
             expect(useAuthStore.getState().isSigningUp).toBe(false);
         });

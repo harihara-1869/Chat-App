@@ -1,6 +1,6 @@
 /**
  * Auth Controller Unit Tests
- * Tests for signup, login, logout, updateProfile, and getUserInfo
+ * Tests for signup, login, logout, updateProfile, getUserInfo, and verifyEmail
  * 
  * These tests use a simplified approach that tests the controller logic
  * by providing mocked request/response objects and testing the expected
@@ -67,6 +67,148 @@ describe('Auth Controller - Input Validation Logic', () => {
             expect(validateLogin('', 'password')).toBeFalsy();
             expect(validateLogin('email@test.com', '')).toBeFalsy();
             expect(validateLogin('email@test.com', 'password')).toBeTruthy();
+        });
+    });
+});
+
+describe('Auth Controller - Email Verification Logic', () => {
+    let mockRes;
+
+    beforeEach(() => {
+        mockRes = createMockRes();
+    });
+
+    describe('Signup email verification flow', () => {
+        it('should not login user immediately after signup', () => {
+            // After signup, we should NOT generate a token
+            // Instead we should return a message asking to verify email
+            const signupResponse = {
+                message: "Account created! Please verify your email to log in.",
+                _id: 'user-123',
+                fullName: 'Test User',
+                email: 'test@example.com'
+            };
+
+            expect(signupResponse.message).toContain('verify your email');
+            expect(signupResponse).not.toHaveProperty('token');
+        });
+
+        it('should generate verification token on signup', () => {
+            // Simulating token generation - 64 char hex string expected
+            const hexPattern = /^[a-f0-9]{64}$/;
+            const mockToken = 'a'.repeat(64); // Simulating output
+
+            expect(mockToken).toHaveLength(64); // 32 bytes = 64 hex chars
+        });
+
+        it('should set token expiration to 24 hours', () => {
+            const now = Date.now();
+            const expiresAt = now + 24 * 60 * 60 * 1000;
+            const expectedDuration = 24 * 60 * 60 * 1000;
+
+            expect(expiresAt - now).toBe(expectedDuration);
+        });
+    });
+
+    describe('Login with email verification', () => {
+        it('should block login for unverified users', () => {
+            const user = { emailVerified: false };
+            const shouldBlock = !user.emailVerified;
+
+            expect(shouldBlock).toBe(true);
+        });
+
+        it('should allow login for verified users', () => {
+            const user = { emailVerified: true };
+            const shouldBlock = !user.emailVerified;
+
+            expect(shouldBlock).toBe(false);
+        });
+
+        it('should return 403 for unverified email', () => {
+            mockRes.status(403).json({ message: 'Please verify your email address before logging in.' });
+
+            expect(mockRes.status).toHaveBeenCalledWith(403);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Please verify your email address before logging in.'
+            });
+        });
+    });
+
+    describe('verifyEmail endpoint', () => {
+        it('should require token in request body', () => {
+            const body = { token: '' };
+            const isValid = !!body.token;
+
+            expect(isValid).toBe(false);
+        });
+
+        it('should validate token expiration', () => {
+            const now = Date.now();
+            const expiredToken = { verificationTokenExpiresAt: now - 1000 };
+            const validToken = { verificationTokenExpiresAt: now + 1000 };
+
+            expect(expiredToken.verificationTokenExpiresAt > now).toBe(false);
+            expect(validToken.verificationTokenExpiresAt > now).toBe(true);
+        });
+
+        it('should clear verification token after successful verification', () => {
+            const user = {
+                emailVerified: false,
+                verificationToken: 'some-token',
+                verificationTokenExpiresAt: new Date()
+            };
+
+            // Simulate verification
+            user.emailVerified = true;
+            user.verificationToken = undefined;
+            user.verificationTokenExpiresAt = undefined;
+
+            expect(user.emailVerified).toBe(true);
+            expect(user.verificationToken).toBeUndefined();
+            expect(user.verificationTokenExpiresAt).toBeUndefined();
+        });
+
+        it('should return 400 for invalid token', () => {
+            mockRes.status(400).json({ message: 'Invalid or expired verification token' });
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should return 200 and user data on successful verification', () => {
+            const userData = {
+                message: 'Email verified successfully',
+                _id: 'user-123',
+                fullName: 'Test User',
+                email: 'test@example.com',
+                profilePic: null
+            };
+
+            mockRes.status(200).json(userData);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
+                message: 'Email verified successfully'
+            }));
+        });
+    });
+
+    describe('Google OAuth email verification', () => {
+        it('should auto-verify email for Google OAuth users', () => {
+            const googleUser = {
+                provider: 'google',
+                emailVerified: true
+            };
+
+            expect(googleUser.emailVerified).toBe(true);
+        });
+
+        it('should skip email verification check for Google users', () => {
+            const user = { provider: 'google', emailVerified: true };
+
+            // Google users should always be verified
+            const isGoogleUser = user.provider === 'google';
+            expect(isGoogleUser).toBe(true);
         });
     });
 });

@@ -1,28 +1,23 @@
 /**
  * SignUpPage Tests
  * Tests for signup page rendering, validation, and user interactions
- * 
- * NOTE: There is a bug in the SignUpPage component:
- * - Form state initializes with `username` field
- * - validateForm() checks `formData.fullName` which is undefined
- * - This causes a TypeError when form validation runs
- * 
- * The tests below work around this issue by testing what is testable
- * without triggering the validation logic.
+ * Including email verification success flow
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { SignUpPage } from '../../pages/SignUpPage';
 
 // Mock the auth store
 const mockSignup = vi.fn();
+const mockGoogleLogin = vi.fn();
 vi.mock('../../store/useAuthStore', () => ({
     useAuthStore: vi.fn(() => ({
         signup: mockSignup,
-        isSigningUp: false
+        isSigningUp: false,
+        googleLogin: mockGoogleLogin
     }))
 }));
 
@@ -56,7 +51,8 @@ describe('SignUpPage', () => {
         vi.clearAllMocks();
         useAuthStore.mockReturnValue({
             signup: mockSignup,
-            isSigningUp: false
+            isSigningUp: false,
+            googleLogin: mockGoogleLogin
         });
     });
 
@@ -88,6 +84,12 @@ describe('SignUpPage', () => {
             // Assert
             expect(screen.getByTestId('auth-pattern')).toBeInTheDocument();
         });
+
+        it('should render Google signup button', () => {
+            renderSignUpPage();
+
+            expect(screen.getByText(/sign up with google/i)).toBeInTheDocument();
+        });
     });
 
     describe('Loading State', () => {
@@ -95,7 +97,8 @@ describe('SignUpPage', () => {
             // Arrange
             useAuthStore.mockReturnValue({
                 signup: mockSignup,
-                isSigningUp: true
+                isSigningUp: true,
+                googleLogin: mockGoogleLogin
             });
 
             // Act
@@ -109,7 +112,8 @@ describe('SignUpPage', () => {
             // Arrange
             useAuthStore.mockReturnValue({
                 signup: mockSignup,
-                isSigningUp: true
+                isSigningUp: true,
+                googleLogin: mockGoogleLogin
             });
 
             // Act
@@ -135,7 +139,8 @@ describe('SignUpPage', () => {
             const allButtons = screen.getAllByRole('button');
             const toggleButton = allButtons.find(btn =>
                 btn.getAttribute('type') === 'button' &&
-                !btn.textContent.includes('Loading')
+                !btn.textContent.includes('Loading') &&
+                !btn.textContent.includes('Google')
             );
 
             await user.click(toggleButton);
@@ -172,16 +177,90 @@ describe('SignUpPage', () => {
         });
     });
 
-    /**
-     * NOTE: Form validation tests are skipped due to a bug in SignUpPage.jsx
-     * 
-     * The bug: formData state initializes with { username: "", ... } but
-     * validateForm() tries to access formData.fullName which is undefined.
-     * This causes a TypeError when the form is submitted.
-     * 
-     * Recommended fix: Change line 19 in SignUpPage.jsx from:
-     *   username: ""
-     * to:
-     *   fullName: ""
-     */
+    describe('Email Verification Flow', () => {
+        it('should show verification message after successful signup', async () => {
+            // Arrange
+            mockSignup.mockResolvedValueOnce(true); // Simulate success
+            const user = userEvent.setup();
+            renderSignUpPage();
+
+            // Fill form
+            await user.type(screen.getByPlaceholderText('John Doe'), 'Test User');
+            await user.type(screen.getByPlaceholderText('you@example.com'), 'test@example.com');
+            await user.type(screen.getByPlaceholderText('••••••••'), 'password123');
+
+            // Submit
+            const submitButton = document.querySelector('button[type="submit"]');
+            await user.click(submitButton);
+
+            // Assert - should show email verification screen
+            await waitFor(() => {
+                expect(screen.getByText(/check your email/i)).toBeInTheDocument();
+            });
+        });
+
+        it('should display entered email in verification message', async () => {
+            mockSignup.mockResolvedValueOnce(true);
+            const user = userEvent.setup();
+            renderSignUpPage();
+
+            await user.type(screen.getByPlaceholderText('John Doe'), 'Test User');
+            await user.type(screen.getByPlaceholderText('you@example.com'), 'myemail@test.com');
+            await user.type(screen.getByPlaceholderText('••••••••'), 'password123');
+
+            const submitButton = document.querySelector('button[type="submit"]');
+            await user.click(submitButton);
+
+            await waitFor(() => {
+                expect(screen.getByText(/myemail@test.com/i)).toBeInTheDocument();
+            });
+        });
+
+        it('should show back to login link on verification screen', async () => {
+            mockSignup.mockResolvedValueOnce(true);
+            const user = userEvent.setup();
+            renderSignUpPage();
+
+            await user.type(screen.getByPlaceholderText('John Doe'), 'Test User');
+            await user.type(screen.getByPlaceholderText('you@example.com'), 'test@example.com');
+            await user.type(screen.getByPlaceholderText('••••••••'), 'password123');
+
+            const submitButton = document.querySelector('button[type="submit"]');
+            await user.click(submitButton);
+
+            await waitFor(() => {
+                expect(screen.getByText(/back to login/i)).toBeInTheDocument();
+            });
+        });
+
+        it('should NOT show verification screen on failed signup', async () => {
+            mockSignup.mockResolvedValueOnce(false); // Simulate failure
+            const user = userEvent.setup();
+            renderSignUpPage();
+
+            await user.type(screen.getByPlaceholderText('John Doe'), 'Test User');
+            await user.type(screen.getByPlaceholderText('you@example.com'), 'test@example.com');
+            await user.type(screen.getByPlaceholderText('••••••••'), 'password123');
+
+            const submitButton = document.querySelector('button[type="submit"]');
+            await user.click(submitButton);
+
+            // Should still show signup form
+            await waitFor(() => {
+                expect(screen.getByRole('heading', { name: 'Create Account' })).toBeInTheDocument();
+            });
+        });
+    });
+
+    describe('Google OAuth', () => {
+        it('should call googleLogin when Google button clicked', async () => {
+            const user = userEvent.setup();
+            renderSignUpPage();
+
+            const googleButton = screen.getByText(/sign up with google/i);
+            await user.click(googleButton);
+
+            expect(mockGoogleLogin).toHaveBeenCalled();
+        });
+    });
 });
