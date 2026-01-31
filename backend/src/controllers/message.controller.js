@@ -2,6 +2,7 @@ import cloudinary from "../lib/cloudinary.js";
 import { getReciverSocketId } from "../lib/socket.js";
 import Message from "../models/message.model.js";
 import User from "../models/user.model.js";
+import Conversation from "../models/conversation.model.js";
 import { io } from "../lib/socket.js"
 
 export const getUsersForSidebar = async (req, res) => {
@@ -44,6 +45,17 @@ export const sendMessage = async (req, res) => {
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
+    // Find or create conversation
+    let conversation = await Conversation.findOne({
+      participants: { $all: [senderId, receiverId] }
+    });
+
+    if (!conversation) {
+      conversation = await Conversation.create({
+        participants: [senderId, receiverId]
+      });
+    }
+
     let imageUrl;
     if (image) {
       const uploadResponse = await cloudinary.uploader.upload(image);
@@ -55,6 +67,7 @@ export const sendMessage = async (req, res) => {
       receiverId,
       text,
       image: imageUrl,
+      conversationId: conversation._id,
     });
 
     await newMessage.save();

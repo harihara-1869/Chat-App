@@ -19,7 +19,7 @@ const friendRequestSchema = new mongoose.Schema(
       enum: ['pending', 'accepted', 'rejected'],
       default: 'pending',
     }
-  }, {timestamps: true}
+  }, { timestamps: true }
 )
 
 friendRequestSchema.index(
@@ -28,11 +28,10 @@ friendRequestSchema.index(
 );
 
 //blocking self friend request 
-friendRequestSchema.pre("save", function (next) {
+friendRequestSchema.pre("save", async function () {
   if (this.senderId.equals(this.receiverId)) {
-    return next(new Error("Cannot send friend request to yourself"));
+    throw new Error("Cannot send friend request to yourself");
   }
-  next();
 });
 
 

@@ -5,7 +5,7 @@ import Conversation from "../models/conversation.model.js";
 export async function friendRequest(req, res) {
   try {
     const senderId = req.user._id;
-    const { id: receiverId } = req.params;
+    const { userId: receiverId } = req.params;
 
     if (senderId.toString() === receiverId) {
       return res.status(400).json({ error: "You can't add yourself" });
