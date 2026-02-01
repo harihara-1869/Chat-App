@@ -1,6 +1,6 @@
 import React from "react";
 import { useAuthStore } from "../store/useAuthStore";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   MessageSquare,
   User,
@@ -23,6 +23,8 @@ export const SignUpPage = () => {
 
   const { signup, isSigningUp, googleLogin } = useAuthStore();
 
+  const navigate = useNavigate();
+
   const validateForm = () => {
     if (!formData.fullName.trim()) return toast.error("Full Name is required");
     if (!formData.email.trim()) return toast.error("Email is required");
@@ -34,11 +36,17 @@ export const SignUpPage = () => {
 
     return true;
   };
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const isValid = validateForm();
-    if (isValid) signup(formData);
+    if (isValid) {
+      const result = await signup(formData);
+      if (result?.success) {
+        // Redirect to login page after successful signup
+        navigate('/login');
+      }
+    }
   };
 
   return (

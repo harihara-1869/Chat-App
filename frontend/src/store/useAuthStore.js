@@ -3,7 +3,8 @@ import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client"
 
-const BASE_URL = "http://localhost:5001"
+const BASE_URL = import.meta.env.VITE_API_URL;
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
@@ -33,11 +34,12 @@ export const useAuthStore = create((set, get) => ({
     set({ isSigningUp: true });
     try {
       const res = await axiosInstance.post("/auth/signup", data);
-      toast.success("Signup successful!");
-      get().connectSocket()
-      set({ authUser: res.data });
+      // Don't set authUser - user needs to verify email first
+      toast.success(res.data.message || "Account created! Please check your email to verify.");
+      return { success: true, message: res.data.message };
     } catch (error) {
       toast.error(error.response?.data?.message || "Signup failed");
+      return { success: false };
     } finally {
       set({ isSigningUp: false });
     }
@@ -88,7 +90,7 @@ export const useAuthStore = create((set, get) => ({
     const { authUser } = get()
     if (!authUser || get().socket?.connected) return;
 
-    const socket = io(BASE_URL, {
+    const socket = io(SOCKET_URL, {
       withCredentials: true, // Send cookies with the handshake
     })
     socket.connect()
@@ -97,10 +99,45 @@ export const useAuthStore = create((set, get) => ({
     socket.on("getOnlineUsers", (userIds) => {
       set({ onlineUsers: userIds })
     })
+
+    // Friend request socket events
+    socket.on("newFriendRequest", (request) => {
+      const { useFriendStore } = require("./useFriendStore");
+      const store = useFriendStore.getState();
+      store.pendingRequests = [...store.pendingRequests, request];
+      useFriendStore.setState({ pendingRequests: store.pendingRequests });
+      toast.success(`${request.senderId?.fullName || "Someone"} sent you a friend request!`);
+    })
+
+    socket.on("friendRequestAccepted", ({ friend }) => {
+      const { useFriendStore } = require("./useFriendStore");
+      useFriendStore.setState({
+        friends: [...useFriendStore.getState().friends, friend]
+      });
+      toast.success(`${friend.fullName} is now your friend!`);
+    })
   },
 
   disconnectSocket: async () => {
     if (get().socket?.connected) get().socket.disconnect();
+  },
+
+  // Email Verification
+  verifyEmail: async (token) => {
+    set({ isVerifyingEmail: true });
+    try {
+      const res = await axiosInstance.post("/auth/verify-email", { token });
+      // Set authUser - user is now verified and logged in
+      set({ authUser: res.data });
+      toast.success("Email verified successfully!");
+      get().connectSocket();
+      return res.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Verification failed");
+      throw error;
+    } finally {
+      set({ isVerifyingEmail: false });
+    }
   },
 
   // Password Reset

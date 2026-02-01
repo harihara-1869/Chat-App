@@ -86,9 +86,10 @@ describe('useAuthStore', () => {
     });
 
     describe('signup', () => {
-        it('should set authUser on successful signup', async () => {
+        it('should return success and NOT set authUser on signup (email verification required)', async () => {
             // Arrange
-            const mockUser = {
+            const mockResponse = {
+                message: 'Account created! Please check your email to verify.',
                 _id: 'user-123',
                 fullName: 'New User',
                 email: 'new@example.com'
@@ -98,16 +99,17 @@ describe('useAuthStore', () => {
                 email: 'new@example.com',
                 password: 'password123'
             };
-            axiosInstance.post.mockResolvedValue({ data: mockUser });
+            axiosInstance.post.mockResolvedValue({ data: mockResponse });
 
             // Act
-            await useAuthStore.getState().signup(signupData);
+            const result = await useAuthStore.getState().signup(signupData);
 
             // Assert
             expect(axiosInstance.post).toHaveBeenCalledWith('/auth/signup', signupData);
-            expect(useAuthStore.getState().authUser).toEqual(mockUser);
+            expect(useAuthStore.getState().authUser).toBeNull(); // User not logged in yet
             expect(useAuthStore.getState().isSigningUp).toBe(false);
-            expect(toast.success).toHaveBeenCalledWith('Signup successful!');
+            expect(result.success).toBe(true);
+            expect(toast.success).toHaveBeenCalled();
         });
 
         it('should show error toast on signup failure', async () => {

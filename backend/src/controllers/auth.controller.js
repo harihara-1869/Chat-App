@@ -18,10 +18,10 @@ export const signup = async (req, res) => {
       return res.status(400).json({ message: "Invalid email format." });
     }
 
-    if (password.length < 6) {
+    if (password.length < 6 || password.length > 20) {
       return res
         .status(400)
-        .json({ message: "Password must be at least 6 characters long." });
+        .json({ message: "Password must be at least 6 characters long and at most 20 characters long." });
     }
 
     const user = await User.findOne({ email });
@@ -42,17 +42,21 @@ export const signup = async (req, res) => {
       fullName,
       email,
       password: hashedPassword,
+      verificationToken,
+      verificationTokenExpiresAt,
     });
 
     if (newUser) {
-      //generate JWT token
-      generateToken(newUser._id, res);
       await newUser.save();
+
+      // Send verification email (don't log user in yet)
+      await sendVerificationEmail(email, verificationToken);
+
       return res.status(201).json({
+        message: "Account created! Please check your email to verify your account.",
         _id: newUser._id,
         fullName: newUser.fullName,
         email: newUser.email,
-        profilePic: newUser.profilePic || null,
       });
     } else {
       return res.status(500).json({ message: "Failed to create user." });
@@ -82,6 +86,14 @@ export const login = async (req, res) => {
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid email or password." });
     }
+
+    // Check if email is verified (skip for Google OAuth users)
+    if (!user.emailVerified && user.provider !== "google") {
+      return res.status(403).json({
+        message: "Please verify your email address before logging in. Check your inbox for the verification link."
+      });
+    }
+
     generateToken(user._id, res);
     return res.status(200).json({
       _id: user._id,

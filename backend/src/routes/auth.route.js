@@ -29,10 +29,24 @@ router.get('/google', authRateLimiter, passport.authenticate('google', {
 }));
 
 router.get('/google/callback',
-    passport.authenticate('google', {
-        session: false,
-        failureRedirect: '/login?error=oauth_failed'
-    }),
+    (req, res, next) => {
+        passport.authenticate('google', {
+            session: false,
+        }, (err, user, info) => {
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+            if (err) {
+                console.error('Google OAuth error:', err);
+                return res.redirect(`${frontendUrl}/login?error=server_error`);
+            }
+            if (!user) {
+                return res.redirect(`${frontendUrl}/login?error=oauth_failed`);
+            }
+
+            req.user = user;
+            next();
+        })(req, res, next);
+    },
     googleCallback
 );
 
