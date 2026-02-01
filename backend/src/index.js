@@ -7,8 +7,6 @@ import dotenv from 'dotenv';
 import { initDB } from './lib/db.js';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import helmet from 'helmet';
-import mongoSanitize from 'express-mongo-sanitize';
 import { app, server } from "./lib/socket.js"
 import passport from './lib/passport.js';
 import { generalRateLimiter } from './middleware/rateLimit.middleware.js';
@@ -19,8 +17,6 @@ dotenv.config();
 const PORT = process.env.PORT || 5001;
 
 // Security middleware
-app.use(helmet()); // Security headers
-app.use(mongoSanitize()); // Prevent NoSQL injection
 
 app.use(express.json({ limit: '10mb' })); // Limit payload size
 app.use(cookieParser());

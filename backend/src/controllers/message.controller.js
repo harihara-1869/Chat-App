@@ -30,7 +30,7 @@ export const getMessages = async (req, res) => {
         { senderId: senderId, receiverId: userToChatId },
         { senderId: userToChatId, receiverId: senderId }
       ]
-    })
+    }).sort({ createdAt: 1 });  // Sort by creation time ascending
 
     res.status(200).json(messages)
   } catch (error) {
