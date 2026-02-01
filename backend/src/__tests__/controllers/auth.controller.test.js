@@ -1,6 +1,6 @@
 /**
  * Auth Controller Unit Tests
- * Tests for signup, login, logout, updateProfile, and getUserInfo
+ * Tests for signup, login, logout, updateProfile, getUserInfo, and verifyEmail
  * 
  * These tests use a simplified approach that tests the controller logic
  * by providing mocked request/response objects and testing the expected

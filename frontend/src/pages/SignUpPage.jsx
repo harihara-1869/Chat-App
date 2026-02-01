@@ -20,6 +20,7 @@ export const SignUpPage = () => {
     email: "",
     password: "",
   });
+  const [isSignupSuccess, setIsSignupSuccess] = React.useState(false);
 
   const { signup, isSigningUp, googleLogin } = useAuthStore();
 

@@ -50,7 +50,7 @@ export const signup = async (req, res) => {
       await newUser.save();
 
       // Send verification email (don't log user in yet)
-      await sendVerificationEmail(email, verificationToken);
+      await sendVerificationEmail(newUser.email, newUser.verificationToken);
 
       return res.status(201).json({
         message: "Account created! Please check your email to verify your account.",
@@ -80,6 +80,11 @@ export const login = async (req, res) => {
       return res.status(400).json({
         message: "This account uses Google login. Please sign in with Google."
       });
+    }
+
+    // Check if email is verified
+    if (!user.emailVerified) {
+      return res.status(403).json({ message: "Please verify your email address before logging in." });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);

@@ -20,8 +20,8 @@ export const useAuthStore = create((set, get) => ({
   checkAuth: async () => {
     try {
       const response = await axiosInstance.get("/auth/get-user");
-      get().connectSocket();
-      set({ authUser: response.data })
+      set({ authUser: response.data });  // Set authUser FIRST
+      get().connectSocket();  // THEN connect socket
     } catch (err) {
       console.error("Auth check failed:", err);
       set({ authUser: null });
@@ -42,6 +42,21 @@ export const useAuthStore = create((set, get) => ({
       return { success: false };
     } finally {
       set({ isSigningUp: false });
+    }
+  },
+
+  verifyEmail: async (token) => {
+    set({ isVerifyingEmail: true });
+    try {
+      const res = await axiosInstance.post("/auth/verify-email", { token });
+      set({ authUser: res.data });
+      get().connectSocket();
+      toast.success("Email verified successfully!");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Verification failed");
+      throw error;
+    } finally {
+      set({ isVerifyingEmail: false });
     }
   },
 
@@ -171,6 +186,6 @@ export const useAuthStore = create((set, get) => ({
 
   // Google OAuth - redirect to backend Google auth endpoint
   googleLogin: () => {
-    window.location.href = `${BASE_URL}/api/auth/google`;
+    window.location.href = `${BASE_URL}/auth/google`;
   }
 }));
