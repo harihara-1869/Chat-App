@@ -50,7 +50,7 @@ export const signup = async (req, res) => {
       await newUser.save();
 
       // Send verification email (don't log user in yet)
-      await sendVerificationEmail(email, verificationToken);
+      await sendVerificationEmail(newUser.email, newUser.verificationToken);
 
       return res.status(201).json({
         message: "Account created! Please check your email to verify your account.",

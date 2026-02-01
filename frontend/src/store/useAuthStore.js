@@ -186,6 +186,6 @@ export const useAuthStore = create((set, get) => ({
 
   // Google OAuth - redirect to backend Google auth endpoint
   googleLogin: () => {
-    window.location.href = `${BASE_URL}/api/auth/google`;
+    window.location.href = `${BASE_URL}/auth/google`;
   }
 }));
