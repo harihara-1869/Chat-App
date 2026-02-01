@@ -5,7 +5,7 @@ dotenv.config();
 
 export const generateToken = (userId, res) => {
   const token = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-    expiresIn: '1d',
+    expiresIn: '3h',
   });
   res.cookie("jwt", token, {
     httpOnly: true,
