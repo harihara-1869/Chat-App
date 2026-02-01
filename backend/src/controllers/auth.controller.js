@@ -2,7 +2,7 @@ import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../lib/utils.js";
 import cloudinary from "../lib/cloudinary.js";
-import { sendVerificationEmail } from "../lib/mailgun.js";
+import { sendResetPasswordEmail, sendVerificationEmail } from "../lib/mailgun.js";
 import crypto from "crypto";
 
 export const signup = async (req, res) => {
@@ -18,10 +18,10 @@ export const signup = async (req, res) => {
       return res.status(400).json({ message: "Invalid email format." });
     }
 
-    if (password.length < 6) {
+    if (password.length < 6 || password.length > 20) {
       return res
         .status(400)
-        .json({ message: "Password must be at least 6 characters long." });
+        .json({ message: "Password must be at least 6 characters long and at most 20 characters long." });
     }
 
     const user = await User.findOne({ email });
@@ -44,21 +44,19 @@ export const signup = async (req, res) => {
       password: hashedPassword,
       verificationToken,
       verificationTokenExpiresAt,
-      emailVerified: false,
     });
 
     if (newUser) {
       await newUser.save();
 
-      // Send verification email
-      await sendVerificationEmail(newUser.email, verificationToken);
+      // Send verification email (don't log user in yet)
+      await sendVerificationEmail(email, verificationToken);
 
       return res.status(201).json({
-        message: "Account created! Please verify your email to log in.",
+        message: "Account created! Please check your email to verify your account.",
         _id: newUser._id,
         fullName: newUser.fullName,
         email: newUser.email,
-        profilePic: newUser.profilePic || null,
       });
     } else {
       return res.status(500).json({ message: "Failed to create user." });
@@ -93,6 +91,14 @@ export const login = async (req, res) => {
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid email or password." });
     }
+
+    // Check if email is verified (skip for Google OAuth users)
+    if (!user.emailVerified && user.provider !== "google") {
+      return res.status(403).json({
+        message: "Please verify your email address before logging in. Check your inbox for the verification link."
+      });
+    }
+
     generateToken(user._id, res);
     return res.status(200).json({
       _id: user._id,
@@ -143,6 +149,7 @@ export const verifyEmail = async (req, res) => {
     return res.status(500).json({ message: "Server error during email verification" });
   }
 };
+
 
 export const logout = (req, res) => {
   try {
@@ -210,3 +217,46 @@ export const googleCallback = (req, res) => {
     res.redirect(`${frontendUrl}/login?error=server_error`);
   }
 };
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    if (user.resetPasswordToken && user.resetPasswordExpiresAt > Date.now()) {
+      return res.status(400).json({ message: "Password reset already in progress" });
+    }
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpiresAt = Date.now() + 15 * 60 * 1000; //15 minutes for reset tokens
+    await user.save();
+    await sendResetPasswordEmail(user.email, resetToken);
+    return res.status(200).json({ message: "Reset password email sent" });
+
+  } catch (error) {
+    console.log("error in reset password:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+export const updatePassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    const user = await User.findOne({ resetPasswordToken: token, resetPasswordExpiresAt: { $gt: Date.now() } });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired token" })
+    }
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpiresAt = undefined;
+    await user.save();
+    return res.status(200).json({ message: "Password updated successfully" })
+  } catch (error) {
+    console.log("error in update password:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}

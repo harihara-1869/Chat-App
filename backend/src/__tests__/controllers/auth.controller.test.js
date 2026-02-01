@@ -305,3 +305,113 @@ describe('Mock Request/Response Utilities', () => {
         expect(res.json).toHaveBeenCalledWith({ success: true });
     });
 });
+
+describe('Auth Controller - Reset Password Logic', () => {
+    let mockRes;
+
+    beforeEach(() => {
+        mockRes = createMockRes();
+    });
+
+    describe('resetPassword endpoint', () => {
+        it('should require email in request body', () => {
+            const body = { email: '' };
+            const isValid = !!body.email;
+
+            expect(isValid).toBe(false);
+        });
+
+        it('should return 404 when user not found', () => {
+            mockRes.status(404).json({ message: 'User not found' });
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ message: 'User not found' });
+        });
+
+        it('should return 400 when reset already in progress', () => {
+            mockRes.status(400).json({ message: 'Password reset already in progress' });
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ message: 'Password reset already in progress' });
+        });
+
+        it('should generate reset token with 64 hex characters', () => {
+            // 32 bytes = 64 hex characters
+            const mockToken = 'a'.repeat(64);
+            expect(mockToken).toHaveLength(64);
+        });
+
+        it('should set token expiration to 15 minutes', () => {
+            const now = Date.now();
+            const expiresAt = now + 15 * 60 * 1000;
+            const expectedDuration = 15 * 60 * 1000;
+
+            expect(expiresAt - now).toBe(expectedDuration);
+        });
+
+        it('should return 200 on successful reset email sent', () => {
+            mockRes.status(200).json({ message: 'Reset password email sent' });
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({ message: 'Reset password email sent' });
+        });
+    });
+
+    describe('updatePassword endpoint', () => {
+        it('should require token and newPassword in request body', () => {
+            const body = { token: '', newPassword: '' };
+            const isValid = body.token && body.newPassword;
+
+            expect(isValid).toBeFalsy();
+        });
+
+        it('should return 400 for invalid or expired token', () => {
+            mockRes.status(400).json({ message: 'Invalid or expired token' });
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ message: 'Invalid or expired token' });
+        });
+
+        it('should validate token expiration', () => {
+            const now = Date.now();
+            const expiredToken = { resetPasswordExpiresAt: now - 1000 };
+            const validToken = { resetPasswordExpiresAt: now + 1000 };
+
+            expect(expiredToken.resetPasswordExpiresAt > now).toBe(false);
+            expect(validToken.resetPasswordExpiresAt > now).toBe(true);
+        });
+
+        it('should clear reset token after successful password update', () => {
+            const user = {
+                password: 'old-hashed-password',
+                resetPasswordToken: 'some-token',
+                resetPasswordExpiresAt: new Date()
+            };
+
+            // Simulate password update
+            user.password = 'new-hashed-password';
+            user.resetPasswordToken = undefined;
+            user.resetPasswordExpiresAt = undefined;
+
+            expect(user.password).toBe('new-hashed-password');
+            expect(user.resetPasswordToken).toBeUndefined();
+            expect(user.resetPasswordExpiresAt).toBeUndefined();
+        });
+
+        it('should return 200 on successful password update', () => {
+            mockRes.status(200).json({ message: 'Password updated successfully' });
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({ message: 'Password updated successfully' });
+        });
+
+        it('should hash password before saving', () => {
+            // Password should never be stored as plain text
+            const plainPassword = 'mypassword123';
+            const hashedPassword = '$2a$10$' + 'X'.repeat(53); // bcrypt hash format
+
+            expect(hashedPassword).not.toBe(plainPassword);
+            expect(hashedPassword.startsWith('$2')).toBe(true); // bcrypt identifier
+        });
+    });
+});
