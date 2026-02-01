@@ -6,6 +6,8 @@ import { LoginPage } from "./pages/LoginPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { FriendsPage } from "./pages/FriendsPage";
+import { VerifyEmailPage } from "./pages/VerifyEmailPage";
+import { ResetPassword } from "./pages/ResetPassword";
 import { Navbar } from "./components/Navbar";
 import { useAuthStore } from "./store/useAuthStore";
 import { useThemeStore } from "./store/useThemeStore";
@@ -38,6 +40,8 @@ function App() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/profile" element={authUser ? <ProfilePage /> : <LoginPage />} />
         <Route path="/friends" element={authUser ? <FriendsPage /> : <LoginPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
       </Routes>
 
       <Toaster />

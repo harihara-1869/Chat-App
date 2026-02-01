@@ -11,6 +11,8 @@ export const useAuthStore = create((set, get) => ({
   isSigningUp: false,
   isLoggingIn: false,
   isUpdatingProfile: false,
+  isVerifyingEmail: false,
+  isResettingPassword: false,
   onlineUsers: [],
   socket: null,
 
@@ -99,6 +101,35 @@ export const useAuthStore = create((set, get) => ({
 
   disconnectSocket: async () => {
     if (get().socket?.connected) get().socket.disconnect();
+  },
+
+  // Password Reset
+  requestPasswordReset: async (email) => {
+    set({ isResettingPassword: true });
+    try {
+      const res = await axiosInstance.post("/auth/reset-password", { email });
+      toast.success("Reset link sent! Check your email.");
+      return res.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to send reset email");
+      throw error;
+    } finally {
+      set({ isResettingPassword: false });
+    }
+  },
+
+  updatePassword: async (token, newPassword) => {
+    set({ isResettingPassword: true });
+    try {
+      const res = await axiosInstance.post("/auth/update-password", { token, newPassword });
+      toast.success("Password reset successfully!");
+      return res.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to reset password");
+      throw error;
+    } finally {
+      set({ isResettingPassword: false });
+    }
   },
 
   // Google OAuth - redirect to backend Google auth endpoint

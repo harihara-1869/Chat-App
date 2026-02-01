@@ -207,4 +207,97 @@ describe('useAuthStore', () => {
             expect(useAuthStore.getState().isUpdatingProfile).toBe(false);
         });
     });
+
+    describe('requestPasswordReset', () => {
+        it('should call reset-password endpoint and show success toast', async () => {
+            // Arrange
+            const mockResponse = { message: 'Reset password email sent' };
+            axiosInstance.post.mockResolvedValue({ data: mockResponse });
+
+            // Act
+            const result = await useAuthStore.getState().requestPasswordReset('test@example.com');
+
+            // Assert
+            expect(axiosInstance.post).toHaveBeenCalledWith('/auth/reset-password', { email: 'test@example.com' });
+            expect(toast.success).toHaveBeenCalledWith('Reset link sent! Check your email.');
+            expect(result).toEqual(mockResponse);
+            expect(useAuthStore.getState().isResettingPassword).toBe(false);
+        });
+
+        it('should show error toast on reset password failure', async () => {
+            // Arrange
+            const error = { response: { data: { message: 'User not found' } } };
+            axiosInstance.post.mockRejectedValue(error);
+
+            // Act & Assert
+            await expect(useAuthStore.getState().requestPasswordReset('notfound@example.com'))
+                .rejects.toEqual(error);
+            expect(toast.error).toHaveBeenCalledWith('User not found');
+            expect(useAuthStore.getState().isResettingPassword).toBe(false);
+        });
+
+        it('should set isResettingPassword to true during request', async () => {
+            // Arrange
+            let capturedState;
+            axiosInstance.post.mockImplementation(() => {
+                capturedState = useAuthStore.getState().isResettingPassword;
+                return Promise.resolve({ data: {} });
+            });
+
+            // Act
+            await useAuthStore.getState().requestPasswordReset('test@example.com');
+
+            // Assert
+            expect(capturedState).toBe(true);
+            expect(useAuthStore.getState().isResettingPassword).toBe(false);
+        });
+    });
+
+    describe('updatePassword', () => {
+        it('should call update-password endpoint and show success toast', async () => {
+            // Arrange
+            const mockResponse = { message: 'Password updated successfully' };
+            axiosInstance.post.mockResolvedValue({ data: mockResponse });
+
+            // Act
+            const result = await useAuthStore.getState().updatePassword('reset-token', 'newpass123');
+
+            // Assert
+            expect(axiosInstance.post).toHaveBeenCalledWith('/auth/update-password', {
+                token: 'reset-token',
+                newPassword: 'newpass123'
+            });
+            expect(toast.success).toHaveBeenCalledWith('Password reset successfully!');
+            expect(result).toEqual(mockResponse);
+            expect(useAuthStore.getState().isResettingPassword).toBe(false);
+        });
+
+        it('should show error toast on update password failure', async () => {
+            // Arrange
+            const error = { response: { data: { message: 'Invalid or expired token' } } };
+            axiosInstance.post.mockRejectedValue(error);
+
+            // Act & Assert
+            await expect(useAuthStore.getState().updatePassword('bad-token', 'newpass123'))
+                .rejects.toEqual(error);
+            expect(toast.error).toHaveBeenCalledWith('Invalid or expired token');
+            expect(useAuthStore.getState().isResettingPassword).toBe(false);
+        });
+
+        it('should set isResettingPassword to true during request', async () => {
+            // Arrange
+            let capturedState;
+            axiosInstance.post.mockImplementation(() => {
+                capturedState = useAuthStore.getState().isResettingPassword;
+                return Promise.resolve({ data: {} });
+            });
+
+            // Act
+            await useAuthStore.getState().updatePassword('token', 'password');
+
+            // Assert
+            expect(capturedState).toBe(true);
+            expect(useAuthStore.getState().isResettingPassword).toBe(false);
+        });
+    });
 });

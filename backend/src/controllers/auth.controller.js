@@ -2,6 +2,8 @@ import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../lib/utils.js";
 import cloudinary from "../lib/cloudinary.js";
+import { sendResetPasswordEmail, sendVerificationEmail } from "../lib/mailgun.js";
+import crypto from "crypto";
 
 export const signup = async (req, res) => {
   const { fullName, email, password } = req.body;
@@ -31,6 +33,10 @@ export const signup = async (req, res) => {
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const verificationTokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
 
     const newUser = new User({
       fullName,
@@ -88,6 +94,45 @@ export const login = async (req, res) => {
     return res.status(500).json({ message: "Server error during login." });
   }
 };
+
+export const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ message: "Verification token is required" });
+    }
+
+    const user = await User.findOne({
+      verificationToken: token,
+      verificationTokenExpiresAt: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired verification token" });
+    }
+
+    user.emailVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpiresAt = undefined;
+    await user.save();
+
+    // Login user immediately after verification
+    generateToken(user._id, res);
+
+    return res.status(200).json({
+      message: "Email verified successfully",
+      _id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      profilePic: user.profilePic || null,
+    });
+  } catch (error) {
+    console.error("Error verifying email:", error);
+    return res.status(500).json({ message: "Server error during email verification" });
+  }
+};
+
 
 export const logout = (req, res) => {
   try {
@@ -155,3 +200,46 @@ export const googleCallback = (req, res) => {
     res.redirect(`${frontendUrl}/login?error=server_error`);
   }
 };
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    if (user.resetPasswordToken && user.resetPasswordExpiresAt > Date.now()) {
+      return res.status(400).json({ message: "Password reset already in progress" });
+    }
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpiresAt = Date.now() + 15 * 60 * 1000; //15 minutes for reset tokens
+    await user.save();
+    await sendResetPasswordEmail(user.email, resetToken);
+    return res.status(200).json({ message: "Reset password email sent" });
+
+  } catch (error) {
+    console.log("error in reset password:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+export const updatePassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    const user = await User.findOne({ resetPasswordToken: token, resetPasswordExpiresAt: { $gt: Date.now() } });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired token" })
+    }
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpiresAt = undefined;
+    await user.save();
+    return res.status(200).json({ message: "Password updated successfully" })
+  } catch (error) {
+    console.log("error in update password:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}

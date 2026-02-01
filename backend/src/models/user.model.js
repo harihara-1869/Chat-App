@@ -41,7 +41,15 @@ const userSchema = new mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
       },
-    ]
+    ],
+    verificationToken: String,
+    verificationTokenExpiresAt: Date,
+    resetPasswordToken: {
+      type: String,
+    },
+    resetPasswordExpiresAt: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );
