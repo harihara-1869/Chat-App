@@ -16,6 +16,8 @@ dotenv.config();
 
 const PORT = process.env.PORT || 5001;
 
+// Security middleware
+
 app.use(express.json({ limit: '10mb' })); // Limit payload size
 app.use(cookieParser());
 app.use(cors({
