@@ -39,7 +39,7 @@ export const VerifyEmailPage = () => {
                     {/* Status Icon */}
                     <div className="flex justify-center">
                         <div className={`size-20 rounded-2xl flex items-center justify-center ${status === "verifying" ? "bg-primary/10" :
-                                status === "success" ? "bg-green-500/10" : "bg-red-500/10"
+                            status === "success" ? "bg-green-500/10" : "bg-red-500/10"
                             }`}>
                             {status === "verifying" && <Loader2 className="size-10 text-primary animate-spin" />}
                             {status === "success" && <BadgeCheck className="size-10 text-green-500" />}

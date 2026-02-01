@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useFriendStore } from "../store/useFriendStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Users, Search, UserPlus, Check, X, Loader2 } from "lucide-react";
+import { Users, Search, UserPlus, Check, X } from "lucide-react";
+import { FriendsListSkeleton, RequestsListSkeleton, SearchResultsSkeleton } from "../components/skeletons/FriendsPageSkeleton";
 
 export const FriendsPage = () => {
     const {
@@ -102,11 +103,7 @@ export const FriendsPage = () => {
                                     </div>
 
                                     <div className="overflow-y-auto flex-1">
-                                        {isSearching && (
-                                            <div className="flex justify-center py-8">
-                                                <Loader2 className="size-8 animate-spin" />
-                                            </div>
-                                        )}
+                                        {isSearching && <SearchResultsSkeleton />}
 
                                         {!isSearching && searchResults.length === 0 && searchQuery.length >= 3 && (
                                             <div className="text-center text-zinc-500 py-8">No users found</div>
@@ -152,11 +149,7 @@ export const FriendsPage = () => {
                             {/* Friends Tab */}
                             {activeTab === "friends" && (
                                 <div className="flex-1 flex flex-col p-4 overflow-y-auto">
-                                    {isLoading && (
-                                        <div className="flex justify-center py-8">
-                                            <Loader2 className="size-8 animate-spin" />
-                                        </div>
-                                    )}
+                                    {isLoading && <FriendsListSkeleton />}
 
                                     {!isLoading && friends.length === 0 && (
                                         <div className="text-center text-zinc-500 py-8">

@@ -85,6 +85,12 @@ export const LoginPage = () => {
               </div>
             </div>
 
+            <div className="text-right">
+              <Link to="/reset-password" className="link link-primary text-sm">
+                Forgot password?
+              </Link>
+            </div>
+
             <button type="submit" className="btn btn-primary w-full" disabled={isLoggingIn}>
               {isLoggingIn ? (
                 <>

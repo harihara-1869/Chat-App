@@ -3,7 +3,8 @@ import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client"
 
-const BASE_URL = "https://chat.manidweepa.site"
+const BASE_URL = import.meta.env.VITE_API_URL;
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
@@ -12,6 +13,7 @@ export const useAuthStore = create((set, get) => ({
   isLoggingIn: false,
   isUpdatingProfile: false,
   isVerifyingEmail: false,
+  isResettingPassword: false,
   onlineUsers: [],
   socket: null,
 
@@ -32,12 +34,12 @@ export const useAuthStore = create((set, get) => ({
     set({ isSigningUp: true });
     try {
       const res = await axiosInstance.post("/auth/signup", data);
-      toast.success("Signup successful! Please verify your email.");
-      // Don't log in immediately, wait for email verification
-      return true; // Indicate success
+      // Don't set authUser - user needs to verify email first
+      toast.success(res.data.message || "Account created! Please check your email to verify.");
+      return { success: true, message: res.data.message };
     } catch (error) {
       toast.error(error.response?.data?.message || "Signup failed");
-      return false;
+      return { success: false };
     } finally {
       set({ isSigningUp: false });
     }
@@ -103,7 +105,7 @@ export const useAuthStore = create((set, get) => ({
     const { authUser } = get()
     if (!authUser || get().socket?.connected) return;
 
-    const socket = io(BASE_URL, {
+    const socket = io(SOCKET_URL, {
       withCredentials: true, // Send cookies with the handshake
     })
     socket.connect()
@@ -112,14 +114,78 @@ export const useAuthStore = create((set, get) => ({
     socket.on("getOnlineUsers", (userIds) => {
       set({ onlineUsers: userIds })
     })
+
+    // Friend request socket events
+    socket.on("newFriendRequest", (request) => {
+      const { useFriendStore } = require("./useFriendStore");
+      const store = useFriendStore.getState();
+      store.pendingRequests = [...store.pendingRequests, request];
+      useFriendStore.setState({ pendingRequests: store.pendingRequests });
+      toast.success(`${request.senderId?.fullName || "Someone"} sent you a friend request!`);
+    })
+
+    socket.on("friendRequestAccepted", ({ friend }) => {
+      const { useFriendStore } = require("./useFriendStore");
+      useFriendStore.setState({
+        friends: [...useFriendStore.getState().friends, friend]
+      });
+      toast.success(`${friend.fullName} is now your friend!`);
+    })
   },
 
   disconnectSocket: async () => {
     if (get().socket?.connected) get().socket.disconnect();
   },
 
+  // Email Verification
+  verifyEmail: async (token) => {
+    set({ isVerifyingEmail: true });
+    try {
+      const res = await axiosInstance.post("/auth/verify-email", { token });
+      // Set authUser - user is now verified and logged in
+      set({ authUser: res.data });
+      toast.success("Email verified successfully!");
+      get().connectSocket();
+      return res.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Verification failed");
+      throw error;
+    } finally {
+      set({ isVerifyingEmail: false });
+    }
+  },
+
+  // Password Reset
+  requestPasswordReset: async (email) => {
+    set({ isResettingPassword: true });
+    try {
+      const res = await axiosInstance.post("/auth/reset-password", { email });
+      toast.success("Reset link sent! Check your email.");
+      return res.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to send reset email");
+      throw error;
+    } finally {
+      set({ isResettingPassword: false });
+    }
+  },
+
+  updatePassword: async (token, newPassword) => {
+    set({ isResettingPassword: true });
+    try {
+      const res = await axiosInstance.post("/auth/update-password", { token, newPassword });
+      toast.success("Password reset successfully!");
+      return res.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to reset password");
+      throw error;
+    } finally {
+      set({ isResettingPassword: false });
+    }
+  },
+
   // Google OAuth - redirect to backend Google auth endpoint
   googleLogin: () => {
-    window.location.href = `${BASE_URL}/api/auth/google`;
+    window.location.href = `${BASE_URL}/auth/google`;
   }
 }));

@@ -1,6 +1,7 @@
 import FriendRequest from "../models/friendRequest.model.js";
 import User from "../models/user.model.js";
 import Conversation from "../models/conversation.model.js";
+import { io, getReciverSocketId } from "../lib/socket.js";
 
 export async function friendRequest(req, res) {
   try {
@@ -54,7 +55,16 @@ export async function friendRequest(req, res) {
       return res.status(400).json({ error: "Already friends" });
     }
 
-    await FriendRequest.create({ senderId, receiverId });
+    const newRequest = await FriendRequest.create({ senderId, receiverId });
+
+    // Populate sender info and emit socket event to receiver
+    const populatedRequest = await FriendRequest.findById(newRequest._id)
+      .populate("senderId", "fullName profilePic email");
+
+    const receiverSocketId = getReciverSocketId(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("newFriendRequest", populatedRequest);
+    }
 
     return res.json({ success: true });
 
@@ -110,6 +120,21 @@ export async function acceptFriendRequest(req, res) {
       if (err.code !== 11000) {
         throw err;
       }
+    }
+
+    // Emit socket events to both users
+    const senderSocketId = getReciverSocketId(userA.toString());
+    const receiverSocketId = getReciverSocketId(userB.toString());
+
+    // Get both users' info for the event
+    const senderUser = await User.findById(userA).select("fullName profilePic email");
+    const receiverUser = await User.findById(userB).select("fullName profilePic email");
+
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("friendRequestAccepted", { friend: receiverUser });
+    }
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("friendRequestAccepted", { friend: senderUser });
     }
 
     return res.json({ success: true });
