@@ -12,7 +12,7 @@ export const useFriendStore = create((set, get) => ({
     getFriends: async () => {
         set({ isLoading: true });
         try {
-            const res = await axiosInstance.get("/friend/friends");
+            const res = await axiosInstance.get("/user/get-friends");
             set({ friends: res.data });
         } catch (error) {
             toast.error(error.response?.data?.error || "Failed to fetch friends");

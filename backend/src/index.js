@@ -10,7 +10,7 @@ import cors from 'cors';
 import { app, server } from "./lib/socket.js"
 import passport from './lib/passport.js';
 import { generalRateLimiter } from './middleware/rateLimit.middleware.js';
-
+import userRoutes from './routes/user.route.js';
 dotenv.config();
 
 
@@ -38,6 +38,7 @@ app.use("/api/auth", authRoutes)
 app.use("/api/message", messageRoutes)
 app.use("/api/friend", friendRoutes)
 app.use("/api/search", searchRoutes)
+app.use("/api/user", userRoutes)
 
 async function startServer() {
   try {
