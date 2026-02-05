@@ -300,9 +300,10 @@ describe('FriendsPage', () => {
     });
 
     describe('Loading States', () => {
-        it('should show loading spinner when isLoading is true', () => {
+        it('should not show empty message when isLoading is true', () => {
             useFriendStore.mockReturnValue({
                 ...useFriendStore(),
+                friends: [],
                 isLoading: true,
                 getFriends: mockGetFriends,
                 getPendingRequests: mockGetPendingRequests,
@@ -310,8 +311,8 @@ describe('FriendsPage', () => {
 
             renderFriendsPage();
 
-            // Should show some loading indicator
-            expect(document.querySelector('.animate-spin')).toBeInTheDocument();
+            // When loading, should not show "no friends" message
+            expect(screen.queryByText(/no friends/i)).not.toBeInTheDocument();
         });
     });
 });

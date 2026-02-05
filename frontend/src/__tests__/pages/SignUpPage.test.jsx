@@ -10,6 +10,9 @@ import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { SignUpPage } from '../../pages/SignUpPage';
 
+// Mock useNavigate
+const mockNavigate = vi.fn();
+
 // Mock the auth store
 const mockSignup = vi.fn();
 const mockGoogleLogin = vi.fn();
@@ -20,6 +23,14 @@ vi.mock('../../store/useAuthStore', () => ({
         googleLogin: mockGoogleLogin
     }))
 }));
+
+vi.mock('react-router-dom', async () => {
+    const actual = await vi.importActual('react-router-dom');
+    return {
+        ...actual,
+        useNavigate: () => mockNavigate
+    };
+});
 
 // Mock react-hot-toast
 vi.mock('react-hot-toast', () => ({
@@ -49,6 +60,7 @@ const renderSignUpPage = () => {
 describe('SignUpPage', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockNavigate.mockClear();
         useAuthStore.mockReturnValue({
             signup: mockSignup,
             isSigningUp: false,
@@ -178,9 +190,9 @@ describe('SignUpPage', () => {
     });
 
     describe('Email Verification Flow', () => {
-        it('should show verification message after successful signup', async () => {
+        it('should navigate to login after successful signup', async () => {
             // Arrange
-            mockSignup.mockResolvedValueOnce(true); // Simulate success
+            mockSignup.mockResolvedValueOnce({ success: true }); // Simulate success
             const user = userEvent.setup();
             renderSignUpPage();
 
@@ -193,14 +205,14 @@ describe('SignUpPage', () => {
             const submitButton = document.querySelector('button[type="submit"]');
             await user.click(submitButton);
 
-            // Assert - should show email verification screen
+            // Assert - should navigate to login
             await waitFor(() => {
-                expect(screen.getByText(/check your email/i)).toBeInTheDocument();
+                expect(mockNavigate).toHaveBeenCalledWith('/login');
             });
         });
 
-        it('should display entered email in verification message', async () => {
-            mockSignup.mockResolvedValueOnce(true);
+        it('should call signup with form data', async () => {
+            mockSignup.mockResolvedValueOnce({ success: true });
             const user = userEvent.setup();
             renderSignUpPage();
 
@@ -212,12 +224,16 @@ describe('SignUpPage', () => {
             await user.click(submitButton);
 
             await waitFor(() => {
-                expect(screen.getByText(/myemail@test.com/i)).toBeInTheDocument();
+                expect(mockSignup).toHaveBeenCalledWith({
+                    fullName: 'Test User',
+                    email: 'myemail@test.com',
+                    password: 'password123'
+                });
             });
         });
 
-        it('should show back to login link on verification screen', async () => {
-            mockSignup.mockResolvedValueOnce(true);
+        it('should NOT navigate on failed signup', async () => {
+            mockSignup.mockResolvedValueOnce({ success: false }); // Simulate failure
             const user = userEvent.setup();
             renderSignUpPage();
 
@@ -228,27 +244,13 @@ describe('SignUpPage', () => {
             const submitButton = document.querySelector('button[type="submit"]');
             await user.click(submitButton);
 
+            // Should NOT navigate
             await waitFor(() => {
-                expect(screen.getByText(/back to login/i)).toBeInTheDocument();
+                expect(mockNavigate).not.toHaveBeenCalled();
             });
-        });
-
-        it('should NOT show verification screen on failed signup', async () => {
-            mockSignup.mockResolvedValueOnce(false); // Simulate failure
-            const user = userEvent.setup();
-            renderSignUpPage();
-
-            await user.type(screen.getByPlaceholderText('John Doe'), 'Test User');
-            await user.type(screen.getByPlaceholderText('you@example.com'), 'test@example.com');
-            await user.type(screen.getByPlaceholderText('••••••••'), 'password123');
-
-            const submitButton = document.querySelector('button[type="submit"]');
-            await user.click(submitButton);
 
             // Should still show signup form
-            await waitFor(() => {
-                expect(screen.getByRole('heading', { name: 'Create Account' })).toBeInTheDocument();
-            });
+            expect(screen.getByRole('heading', { name: 'Create Account' })).toBeInTheDocument();
         });
     });
 

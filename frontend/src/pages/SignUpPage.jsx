@@ -16,7 +16,7 @@ import toast from "react-hot-toast";
 export const SignUpPage = () => {
   const [showPassword, setShowPassword] = React.useState(false);
   const [formData, setFormData] = React.useState({
-    username: "",
+    fullName: "",
     email: "",
     password: "",
   });
