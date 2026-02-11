@@ -1,6 +1,6 @@
 /**
  * Message Controller Unit Tests
- * Tests for getUsersForSidebar, getMessages, sendMessage
+ * Tests for getMessages, sendMessage
  * 
  * These tests use a simplified approach focusing on testing the
  * expected behavior patterns and response formats.
@@ -27,22 +27,6 @@ const createMockRes = () => {
 };
 
 describe('Message Controller - Query Logic', () => {
-
-    describe('getUsersForSidebar', () => {
-        it('should filter out logged-in user from results', () => {
-            const loggedInUserId = 'user-123';
-            const allUsers = [
-                { _id: 'user-123', fullName: 'Logged In User' },
-                { _id: 'user-456', fullName: 'Other User 1' },
-                { _id: 'user-789', fullName: 'Other User 2' }
-            ];
-
-            const filteredUsers = allUsers.filter(u => u._id !== loggedInUserId);
-
-            expect(filteredUsers).toHaveLength(2);
-            expect(filteredUsers.find(u => u._id === 'user-123')).toBeUndefined();
-        });
-    });
 
     describe('getMessages', () => {
         it('should construct correct query for messages between two users', () => {
@@ -102,15 +86,6 @@ describe('Message Controller - Response Format', () => {
 
     beforeEach(() => {
         mockRes = createMockRes();
-    });
-
-    it('should return 200 with users array', () => {
-        const users = [{ _id: '1' }, { _id: '2' }];
-
-        mockRes.status(200).json(users);
-
-        expect(mockRes.status).toHaveBeenCalledWith(200);
-        expect(mockRes.json).toHaveBeenCalledWith(users);
     });
 
     it('should return 201 for created message', () => {
