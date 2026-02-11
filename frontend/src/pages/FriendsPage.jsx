@@ -149,7 +149,7 @@ export const FriendsPage = () => {
                             {/* Friends Tab */}
                             {activeTab === "friends" && (
                                 <div className="flex-1 flex flex-col p-4 overflow-y-auto">
-                                    {isLoading && <FriendsListSkeleton />}
+                                    {/* {isLoading && <FriendsListSkeleton />} */}
 
                                     {!isLoading && friends.length === 0 && (
                                         <div className="text-center text-zinc-500 py-8">

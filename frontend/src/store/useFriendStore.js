@@ -12,7 +12,7 @@ export const useFriendStore = create((set, get) => ({
     getFriends: async () => {
         set({ isLoading: true });
         try {
-            const res = await axiosInstance.get("/friend/friends");
+            const res = await axiosInstance.get("/user/get-friends");
             set({ friends: res.data });
         } catch (error) {
             toast.error(error.response?.data?.error || "Failed to fetch friends");
@@ -65,7 +65,6 @@ export const useFriendStore = create((set, get) => ({
     acceptRequest: async (requestId) => {
         try {
             await axiosInstance.post(`/friend/accept/${requestId}`);
-            toast.success("Friend request accepted!");
             // Remove from pending and refresh friends
             set({ pendingRequests: get().pendingRequests.filter(r => r._id !== requestId) });
             get().getFriends();

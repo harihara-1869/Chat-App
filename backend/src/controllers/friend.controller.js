@@ -188,16 +188,3 @@ export async function getPendingRequests(req, res) {
     return res.status(500).json({ error: "Server error" });
   }
 }
-
-export async function getFriends(req, res) {
-  try {
-    const userId = req.user._id;
-
-    const user = await User.findById(userId).populate("friends", "fullName profilePic email");
-
-    res.status(200).json(user.friends);
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: "Server error" });
-  }
-}

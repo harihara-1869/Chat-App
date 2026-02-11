@@ -67,7 +67,7 @@ describe('useAuthStore', () => {
             await useAuthStore.getState().checkAuth();
 
             // Assert
-            expect(axiosInstance.get).toHaveBeenCalledWith('/auth/get-user');
+            expect(axiosInstance.get).toHaveBeenCalledWith('/user/get-user');
             expect(useAuthStore.getState().authUser).toEqual(mockUser);
             expect(useAuthStore.getState().isCheckingAuth).toBe(false);
         });
@@ -122,7 +122,7 @@ describe('useAuthStore', () => {
 
             // Assert
             expect(toast.error).toHaveBeenCalledWith('Email already exists');
-            expect(result).toBe(false);
+            expect(result).toEqual({ success: false });
             expect(useAuthStore.getState().authUser).toBeNull();
             expect(useAuthStore.getState().isSigningUp).toBe(false);
         });
@@ -191,7 +191,7 @@ describe('useAuthStore', () => {
             await useAuthStore.getState().updateProfile({ profilePic: 'base64-image' });
 
             // Assert
-            expect(axiosInstance.put).toHaveBeenCalledWith('/auth/update-profile', { profilePic: 'base64-image' });
+            expect(axiosInstance.put).toHaveBeenCalledWith('/user/update-profile', { profilePic: 'base64-image' });
             expect(useAuthStore.getState().authUser).toEqual(updatedUser);
             expect(useAuthStore.getState().isUpdatingProfile).toBe(false);
             expect(toast.success).toHaveBeenCalledWith('Profile updated successfully!');

@@ -1,6 +1,6 @@
 /**
  * useChatStore Tests
- * Tests for chat state management
+ * Tests for chat messaging state management
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -41,45 +41,11 @@ describe('useChatStore', () => {
         // Reset store state
         useChatStore.setState({
             messages: [],
-            users: [],
             selectedUser: null,
-            isUsersLoading: false,
             isMessagesLoading: false
         });
 
         vi.clearAllMocks();
-    });
-
-    describe('getUsers', () => {
-        it('should fetch and set users', async () => {
-            // Arrange
-            const mockUsers = [
-                { _id: 'user-1', fullName: 'User 1' },
-                { _id: 'user-2', fullName: 'User 2' }
-            ];
-            axiosInstance.get.mockResolvedValue({ data: mockUsers });
-
-            // Act
-            await useChatStore.getState().getUsers();
-
-            // Assert
-            expect(axiosInstance.get).toHaveBeenCalledWith('/message/users');
-            expect(useChatStore.getState().users).toEqual(mockUsers);
-            expect(useChatStore.getState().isUsersLoading).toBe(false);
-        });
-
-        it('should show error toast on failure', async () => {
-            // Arrange
-            const error = { response: { data: { message: 'Failed to load users' } } };
-            axiosInstance.get.mockRejectedValue(error);
-
-            // Act
-            await useChatStore.getState().getUsers();
-
-            // Assert
-            expect(toast.error).toHaveBeenCalledWith('Failed to load users');
-            expect(useChatStore.getState().isUsersLoading).toBe(false);
-        });
     });
 
     describe('getMessages', () => {
