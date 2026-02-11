@@ -13,6 +13,7 @@ import { useAuthStore } from "./store/useAuthStore";
 import { useThemeStore } from "./store/useThemeStore";
 import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
+import { useNotificationStore } from "./store/useNotificationStore";
 
 function App() {
   const { authUser, checkAuth, isCheckingAuth, onlineUsers } = useAuthStore();
@@ -23,6 +24,16 @@ function App() {
   React.useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  const requestPermission = useNotificationStore(
+    (s) => s.requestPermission
+  );
+
+  React.useEffect(() => {
+    if (authUser) {
+      requestPermission();
+    }
+  }, [authUser, requestPermission]);
 
   if (isCheckingAuth && !authUser) return (
     <div className="flex items-center justify-center h-screen">
