@@ -2,28 +2,31 @@ import { useChatStore } from "../store/useChatStore"
 import { useEffect, useRef } from "react"
 import { ChatHeader } from "./ChatHeader"
 import { MessageInput } from "./MessageInput"
-import {MessageSkeleton} from "./skeletons/MessageSkeleton"
+import { MessageSkeleton } from "./skeletons/MessageSkeleton"
 import { useAuthStore } from "../store/useAuthStore"
 import { formatMessageTime } from "../lib/utils"
 
 export const ChatContainer = () => {
-  const {messages, getMessages, isMessagesLoading, selectedUser, subscribeToMessages, unsubscribeToMessages} = useChatStore()
-  const {authUser} = useAuthStore()
+  const { messages, getMessages, isMessagesLoading, selectedUser } = useChatStore()
+  const { authUser } = useAuthStore()
   const messageEndRef = useRef(null);
 
   useEffect(() => {
-    getMessages(selectedUser._id);
-    subscribeToMessages();
-    return () => unsubscribeToMessages();
-  }, [selectedUser._id, getMessages, subscribeToMessages, unsubscribeToMessages])
+    useChatStore.setState({ isChatOpen: true });
+    return () => useChatStore.setState({ isChatOpen: false });
+  }, []);
 
   useEffect(() => {
-    if(messageEndRef.current && messages){
-      messageEndRef.current.scrollIntoView({behavior: "smooth"});
+    getMessages(selectedUser._id);
+  }, [selectedUser._id, getMessages])
+
+  useEffect(() => {
+    if (messageEndRef.current && messages) {
+      messageEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages])
 
-  if(isMessagesLoading) return (
+  if (isMessagesLoading) return (
     <div className="flex-1 flex flex-col overflow-auto">
       <ChatHeader />
       <MessageSkeleton />
@@ -37,7 +40,7 @@ export const ChatContainer = () => {
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
-          <div 
+          <div
             key={message._id}
             className={`chat ${message.senderId === authUser._id ? "chat-end" : "chat-start"}`}
             ref={messageEndRef}
@@ -67,7 +70,7 @@ export const ChatContainer = () => {
       </div>
 
       <MessageInput />
-      
+
     </div>
   )
 }

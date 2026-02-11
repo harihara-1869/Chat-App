@@ -65,7 +65,6 @@ export const useFriendStore = create((set, get) => ({
     acceptRequest: async (requestId) => {
         try {
             await axiosInstance.post(`/friend/accept/${requestId}`);
-            toast.success("Friend request accepted!");
             // Remove from pending and refresh friends
             set({ pendingRequests: get().pendingRequests.filter(r => r._id !== requestId) });
             get().getFriends();

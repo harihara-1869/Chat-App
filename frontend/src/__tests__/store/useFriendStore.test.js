@@ -192,7 +192,6 @@ describe('useFriendStore', () => {
             await useFriendStore.getState().acceptRequest('req-1');
 
             expect(axiosInstance.post).toHaveBeenCalledWith('/friend/accept/req-1');
-            expect(toast.success).toHaveBeenCalledWith('Friend request accepted!');
         });
 
         it('should remove request from pending after accepting', async () => {
