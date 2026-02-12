@@ -4,12 +4,17 @@ import { generateToken } from "../lib/utils.js";
 import cloudinary from "../lib/cloudinary.js";
 import { sendResetPasswordEmail, sendVerificationEmail } from "../lib/mailgun.js";
 import crypto from "crypto";
+import { env } from "process";
 
 export const signup = async (req, res) => {
-  const { fullName, email, password } = req.body;
+  const { fullName, email, password, privacyPolicy } = req.body;
   try {
-    if (!fullName || !email || !password) {
+    if (!fullName || !email || !password || !privacyPolicy) {
       return res.status(400).json({ message: "All fields are required." });
+    }
+
+    if (!privacyPolicy) {
+      return res.status(400).json({ message: "You must accept the privacy policy." });
     }
 
     if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -36,7 +41,8 @@ export const signup = async (req, res) => {
 
     // Generate verification token
     const verificationToken = crypto.randomBytes(32).toString("hex");
-    const verificationTokenExpiresAt = Date.now() + 3 * 60 * 60 * 1000; // 3 hours
+    const verificationTokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+    const accountExpiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 day cleanup
 
     const newUser = new User({
       fullName,
@@ -44,13 +50,17 @@ export const signup = async (req, res) => {
       password: hashedPassword,
       verificationToken,
       verificationTokenExpiresAt,
+      privacyPolicyAccepted: true,
+      accountExpiresAt,
     });
 
     if (newUser) {
       await newUser.save();
 
-      // Send verification email (don't log user in yet)
-      await sendVerificationEmail(newUser.email, newUser.verificationToken);
+      // Send verification email but no login
+      if (env.CHECK_MAIL === "true") {
+        await sendVerificationEmail(newUser.email, newUser.verificationToken);
+      }
 
       return res.status(201).json({
         message: "Account created! Please check your email to verify your account.",
@@ -82,21 +92,18 @@ export const login = async (req, res) => {
       });
     }
 
-    // Check if email is verified
-    if (!user.emailVerified) {
-      return res.status(403).json({ message: "Please verify your email address before logging in." });
-    }
-
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid email or password." });
     }
 
     // Check if email is verified (skip for Google OAuth users)
-    if (!user.emailVerified && user.provider !== "google") {
-      return res.status(403).json({
-        message: "Please verify your email address before logging in. Check your inbox for the verification link."
-      });
+    if (env.CHECK_MAIL === "true") {
+      if (!user.emailVerified && user.provider !== "google") {
+        return res.status(403).json({
+          message: "Please verify your email address before logging in. Check your inbox for the verification link."
+        });
+      }
     }
 
     generateToken(user._id, res);
@@ -132,6 +139,7 @@ export const verifyEmail = async (req, res) => {
     user.emailVerified = true;
     user.verificationToken = undefined;
     user.verificationTokenExpiresAt = undefined;
+    user.accountExpiresAt = null;
     await user.save();
 
     // Login user immediately after verification

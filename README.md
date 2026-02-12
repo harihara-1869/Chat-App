@@ -16,6 +16,7 @@ A full-stack real-time chat application built with the MERN stack (MongoDB, Expr
 - 🔐 **Secure Authentication:** User signup, login, google oauth and logout with HttpOnly cookies.
 - 👥 **Friend System:** Search users, send friend requests, and manage friends.
 - 💬 **Real-time Messaging:** Chat only with friends using Socket.io.
+- 🔔 **Notifications:** Real-time browser notifications for new messages.
 - 🟢 **Online Status:** Real-time online/offline user status updates.
 - 🖼️ **Image Sharing:** Upload and share images in chat via Cloudinary.
 - 🎨 **Theming:** Multiple color themes support (coffee, dark, etc.).
@@ -34,8 +35,18 @@ A full-stack real-time chat application built with the MERN stack (MongoDB, Expr
 | `POST` | `/signup` | Create a new user account | No |
 | `POST` | `/login` | Log in and receive auth cookie | No |
 | `POST` | `/logout` | Log out and clear session | No |
+| `POST` | `/verify-email` | Verify user email address | No |
+| `POST` | `/reset-password` | Reset password via email token | No |
+| `POST` | `/update-password` | Update password | **Yes** |
+| `GET` | `/google` | Initiate Google OAuth login | No |
+| `GET` | `/google/callback` | Handle Google OAuth callback | No |
+
+#### User (`/api/user`)
+| Method | Endpoint | Description | Protected |
+| :--- | :--- | :--- | :--- |
 | `PUT` | `/update-profile` | Update profile picture | **Yes** |
 | `GET` | `/get-user` | Get current authenticated user info | **Yes** |
+| `GET` | `/get-friends` | Get list of friends | **Yes** |
 
 #### Friends (`/api/friend`)
 | Method | Endpoint | Description | Protected |
@@ -44,7 +55,6 @@ A full-stack real-time chat application built with the MERN stack (MongoDB, Expr
 | `GET` | `/requests/pending` | Get received pending requests | **Yes** |
 | `POST` | `/accept/:requestId` | Accept friend request | **Yes** |
 | `POST` | `/reject/:requestId` | Reject friend request | **Yes** |
-| `GET` | `/friends` | Get list of friends | **Yes** |
 
 #### Search (`/api/search`)
 | Method | Endpoint | Description | Protected |
@@ -54,7 +64,6 @@ A full-stack real-time chat application built with the MERN stack (MongoDB, Expr
 #### Messages (`/api/message`)
 | Method | Endpoint | Description | Protected |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/users` | Get list of sidebar users (friends) | **Yes** |
 | `GET` | `/:id` | Get message history (Friends only) | **Yes** |
 | `POST` | `/send/:id` | Send message/image (Friends only) | **Yes** |
 

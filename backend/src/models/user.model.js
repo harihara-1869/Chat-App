@@ -50,12 +50,24 @@ const userSchema = new mongoose.Schema(
     resetPasswordExpiresAt: {
       type: Date,
     },
+    privacyPolicyAccepted: {
+      type: Boolean,
+      default: false,
+    },
+    accountExpiresAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );
 
 // Create sparse index for googleId (allows multiple nulls but unique non-null values)
 userSchema.index({ googleId: 1 }, { sparse: true, unique: true });
+userSchema.index(
+  { accountExpiresAt: 1 },
+  { expireAfterSeconds: 0 }
+);
 
 const User = mongoose.model("User", userSchema);
 export default User;
