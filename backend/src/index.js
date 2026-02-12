@@ -10,7 +10,9 @@ import cors from 'cors';
 import { app, server } from "./lib/socket.js"
 import passport from './lib/passport.js';
 import { generalRateLimiter } from './middleware/rateLimit.middleware.js';
+import { requirePrivacyPolicy } from './middleware/requirePrivacyPolicy.js';
 import userRoutes from './routes/user.route.js';
+import privacyRoutes from './routes/privacy.route.js';
 dotenv.config();
 
 
@@ -34,7 +36,11 @@ app.set('trust proxy', 1);
 // Apply general rate limiting to all API routes
 app.use("/api", generalRateLimiter);
 
+// Enforce privacy policy acceptance on all /api routes (after rate limiting)
+app.use("/api", requirePrivacyPolicy);
+
 app.use("/api/auth", authRoutes)
+app.use("/api/privacy-policy", privacyRoutes)
 app.use("/api/message", messageRoutes)
 app.use("/api/friend", friendRoutes)
 app.use("/api/search", searchRoutes)

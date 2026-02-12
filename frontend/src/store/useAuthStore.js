@@ -15,20 +15,34 @@ export const useAuthStore = create((set, get) => ({
   isUpdatingProfile: false,
   isVerifyingEmail: false,
   isResettingPassword: false,
+  requiresPrivacyPolicy: false,
   onlineUsers: [],
   socket: null,
 
   checkAuth: async () => {
     try {
       const response = await axiosInstance.get("/user/get-user");
-      set({ authUser: response.data });  // Set authUser FIRST
+      set({ authUser: response.data, requiresPrivacyPolicy: false });  // Set authUser FIRST
       get().connectSocket();  // THEN connect socket
     } catch (err) {
-      console.error("Auth check failed:", err);
-      set({ authUser: null });
+      // If 403 with requiresPrivacyPolicy, user is authenticated but needs to accept
+      if (err.response?.status === 403 && err.response?.data?.requiresPrivacyPolicy) {
+        set({ authUser: { _pending_privacy: true }, requiresPrivacyPolicy: true });
+      } else {
+        console.error("Auth check failed:", err);
+        set({ authUser: null, requiresPrivacyPolicy: false });
+      }
     } finally {
       set({ isCheckingAuth: false });
     }
+  },
+
+  acceptPrivacyPolicy: async () => {
+    const res = await axiosInstance.post("/privacy-policy/accept", { accepted: true });
+    // Re-run checkAuth to get the full user object and connect socket
+    set({ requiresPrivacyPolicy: false });
+    await get().checkAuth();
+    return res.data;
   },
 
   signup: async (data) => {
@@ -69,7 +83,7 @@ export const useAuthStore = create((set, get) => ({
     } catch (err) {
       console.error("Logout failed:", err);
     } finally {
-      set({ authUser: null });
+      set({ authUser: null, requiresPrivacyPolicy: false });
     }
   },
 

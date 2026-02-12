@@ -53,6 +53,11 @@ const userSchema = new mongoose.Schema(
     privacyPolicyAccepted: {
       type: Boolean,
       default: false,
+      required: true,
+    },
+    privacyPolicyAcceptedAt: {
+      type: Date,
+      default: null,
     },
     accountExpiresAt: {
       type: Date,

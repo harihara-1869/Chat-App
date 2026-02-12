@@ -37,7 +37,7 @@ passport.use(
                     return done(null, user);
                 }
 
-                // Create new user
+                // Create new user — privacy policy NOT accepted yet
                 const newUser = new User({
                     provider: "google",
                     googleId: profile.id,
@@ -45,6 +45,7 @@ passport.use(
                     emailVerified: profile.emails[0].verified || true,
                     fullName: profile.displayName,
                     profilePic: profile.photos?.[0]?.value || "",
+                    privacyPolicyAccepted: false,
                 });
 
                 await newUser.save();

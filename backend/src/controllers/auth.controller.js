@@ -51,6 +51,7 @@ export const signup = async (req, res) => {
       verificationToken,
       verificationTokenExpiresAt,
       privacyPolicyAccepted: true,
+      privacyPolicyAcceptedAt: new Date(),
       accountExpiresAt,
     });
 
@@ -185,6 +186,11 @@ export const googleCallback = (req, res) => {
 
     // Generate JWT token
     generateToken(req.user._id, res);
+
+    // Redirect users who haven't accepted the privacy policy
+    if (!req.user.privacyPolicyAccepted) {
+      return res.redirect(`${frontendUrl}/accept-privacy-policy`);
+    }
 
     // Redirect to frontend
     res.redirect(frontendUrl);
