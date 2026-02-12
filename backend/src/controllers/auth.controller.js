@@ -1,6 +1,6 @@
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
-import { generateToken } from "../lib/utils.js";
+import { generateToken, generateTempToken, verifyTempToken } from "../lib/utils.js";
 import cloudinary from "../lib/cloudinary.js";
 import { sendResetPasswordEmail, sendVerificationEmail } from "../lib/mailgun.js";
 import crypto from "crypto";
@@ -178,16 +178,28 @@ export const googleCallback = (req, res) => {
   try {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
-    // User is already authenticated by Passport at this point (req.user is set)
+    // User is already processed by Passport at this point (req.user is set)
     if (!req.user) {
       return res.redirect(`${frontendUrl}/login?error=auth_failed`);
     }
 
-    // Generate JWT token
-    generateToken(req.user._id, res);
+    const { user, pendingUser, isNewUser, needsPrivacyAcceptance } = req.user;
 
-    // Redirect to frontend
-    res.redirect(frontendUrl);
+    if (isNewUser) {
+      // Generate temp token for new user to complete signup
+      const tempToken = generateTempToken(pendingUser);
+      return res.redirect(`${frontendUrl}/complete-google-signup?token=${tempToken}`);
+    }
+
+    if (needsPrivacyAcceptance) {
+      // Existing user needs to accept privacy policy
+      return res.redirect(`${frontendUrl}/privacy-required?email=${encodeURIComponent(user.email)}`);
+    }
+
+    // Existing user with privacy policy accepted - generate JWT and login
+    generateToken(user._id, res);
+    return res.redirect(frontendUrl);
+
   } catch (error) {
     console.error("Error during Google OAuth callback:", error);
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -237,3 +249,167 @@ export const updatePassword = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 }
+
+export const completeGoogleSignup = async (req, res) => {
+  try {
+    const { tempToken, privacyPolicy, fullName } = req.body;
+
+    if (!tempToken || !privacyPolicy) {
+      return res.status(400).json({ 
+        message: "Temp token and privacy policy acceptance are required." 
+      });
+    }
+
+    if (!privacyPolicy) {
+      return res.status(400).json({ 
+        message: "You must accept the privacy policy to continue." 
+      });
+    }
+
+    // Verify temp token
+    const tokenData = verifyTempToken(tempToken);
+    if (!tokenData) {
+      return res.status(400).json({ 
+        message: "Invalid or expired signup token. Please try signing up with Google again." 
+      });
+    }
+
+    // Check if user already exists (double-check)
+    const existingUser = await User.findOne({ 
+      $or: [
+        { googleId: tokenData.googleId },
+        { email: tokenData.email }
+      ]
+    });
+
+    if (existingUser) {
+      // User already exists - check if they need to accept privacy policy
+      if (!existingUser.privacyPolicyAccepted) {
+        existingUser.privacyPolicyAccepted = true;
+        await existingUser.save();
+      }
+      
+      generateToken(existingUser._id, res);
+      return res.status(200).json({
+        message: "Account linked successfully",
+        _id: existingUser._id,
+        fullName: existingUser.fullName,
+        email: existingUser.email,
+        profilePic: existingUser.profilePic || null,
+      });
+    }
+
+    // Create new user
+    const newUser = new User({
+      provider: "google",
+      googleId: tokenData.googleId,
+      email: tokenData.email,
+      emailVerified: tokenData.emailVerified,
+      fullName: fullName || tokenData.fullName,
+      profilePic: tokenData.profilePic || "",
+      privacyPolicyAccepted: true,
+    });
+
+    await newUser.save();
+
+    // Generate JWT and login
+    generateToken(newUser._id, res);
+    return res.status(201).json({
+      message: "Account created successfully",
+      _id: newUser._id,
+      fullName: newUser.fullName,
+      email: newUser.email,
+      profilePic: newUser.profilePic || null,
+    });
+
+  } catch (error) {
+    console.error("Error completing Google signup:", error);
+    return res.status(500).json({ message: "Server error during account creation." });
+  }
+};
+
+export const acceptPrivacyPolicy = async (req, res) => {
+  try {
+    const { email, privacyPolicy } = req.body;
+
+    if (!email || !privacyPolicy) {
+      return res.status(400).json({ 
+        message: "Email and privacy policy acceptance are required." 
+      });
+    }
+
+    if (!privacyPolicy) {
+      return res.status(400).json({ 
+        message: "You must accept the privacy policy to continue." 
+      });
+    }
+
+    const user = await User.findOne({ email });
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    if (user.privacyPolicyAccepted) {
+      // Already accepted - just login
+      generateToken(user._id, res);
+      return res.status(200).json({
+        message: "Privacy policy already accepted",
+        _id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        profilePic: user.profilePic || null,
+      });
+    }
+
+    // Update user to accept privacy policy
+    user.privacyPolicyAccepted = true;
+    await user.save();
+
+    // Generate JWT and login
+    generateToken(user._id, res);
+    return res.status(200).json({
+      message: "Privacy policy accepted successfully",
+      _id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      profilePic: user.profilePic || null,
+    });
+
+  } catch (error) {
+    console.error("Error accepting privacy policy:", error);
+    return res.status(500).json({ message: "Server error." });
+  }
+};
+
+// Verify Google OAuth temp token and return user data
+export const verifyGoogleToken = async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    if (!token) {
+      return res.status(400).json({ message: "Token is required." });
+    }
+
+    // Verify temp token
+    const tokenData = verifyTempToken(token);
+    if (!tokenData) {
+      return res.status(400).json({ 
+        message: "Invalid or expired signup token. Please try signing up with Google again." 
+      });
+    }
+
+    // Return the user data from token
+    return res.status(200).json({
+      googleId: tokenData.googleId,
+      email: tokenData.email,
+      fullName: tokenData.fullName,
+      profilePic: tokenData.profilePic,
+      emailVerified: tokenData.emailVerified,
+    });
+
+  } catch (error) {
+    console.error("Error verifying Google token:", error);
+    return res.status(500).json({ message: "Server error." });
+  }
+};

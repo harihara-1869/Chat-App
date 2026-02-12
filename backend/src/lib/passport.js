@@ -19,7 +19,12 @@ passport.use(
                 let user = await User.findOne({ googleId: profile.id });
 
                 if (user) {
-                    return done(null, user);
+                    // User exists with this Google ID - check privacy policy
+                    return done(null, { 
+                        user,
+                        isNewUser: false,
+                        needsPrivacyAcceptance: !user.privacyPolicyAccepted 
+                    });
                 }
 
                 // Check if user exists with same email (from local registration)
@@ -34,21 +39,27 @@ passport.use(
                         user.profilePic = profile.photos[0].value;
                     }
                     await user.save();
-                    return done(null, user);
+                    return done(null, { 
+                        user,
+                        isNewUser: false,
+                        needsPrivacyAcceptance: !user.privacyPolicyAccepted 
+                    });
                 }
 
-                // Create new user
-                const newUser = new User({
-                    provider: "google",
+                // New user - return pending data for privacy policy acceptance
+                const pendingUser = {
                     googleId: profile.id,
                     email: profile.emails[0].value,
                     emailVerified: profile.emails[0].verified || true,
                     fullName: profile.displayName,
                     profilePic: profile.photos?.[0]?.value || "",
-                });
+                };
 
-                await newUser.save();
-                return done(null, newUser);
+                return done(null, {
+                    pendingUser,
+                    isNewUser: true,
+                    needsPrivacyAcceptance: true
+                });
             } catch (error) {
                 return done(error, null);
             }

@@ -155,5 +155,50 @@ export const useAuthStore = create((set, get) => ({
   // Google OAuth - redirect to backend Google auth endpoint
   googleLogin: () => {
     window.location.href = `${BASE_URL}/auth/google`;
+  },
+
+  // Verify Google OAuth temp token and get user data
+  verifyGoogleToken: async (token) => {
+    try {
+      const res = await axiosInstance.get(`/auth/google/verify-token?token=${token}`);
+      return { success: true, data: res.data };
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Invalid or expired token");
+      return { success: false, error: error.response?.data?.message };
+    }
+  },
+
+  // Complete Google OAuth signup with privacy policy acceptance
+  completeGoogleSignup: async (data) => {
+    set({ isSigningUp: true });
+    try {
+      const res = await axiosInstance.post("/auth/google/complete-signup", data);
+      set({ authUser: res.data });
+      toast.success("Account created successfully!");
+      get().connectSocket();
+      return { success: true };
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to complete signup");
+      return { success: false, error: error.response?.data?.message };
+    } finally {
+      set({ isSigningUp: false });
+    }
+  },
+
+  // Accept privacy policy for existing Google OAuth users
+  acceptPrivacyPolicy: async (data) => {
+    set({ isLoggingIn: true });
+    try {
+      const res = await axiosInstance.post("/auth/google/accept-privacy", data);
+      set({ authUser: res.data });
+      toast.success("Privacy policy accepted!");
+      get().connectSocket();
+      return { success: true };
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to accept privacy policy");
+      return { success: false, error: error.response?.data?.message };
+    } finally {
+      set({ isLoggingIn: false });
+    }
   }
 }));

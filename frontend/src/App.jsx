@@ -8,6 +8,8 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { FriendsPage } from "./pages/FriendsPage";
 import { VerifyEmailPage } from "./pages/VerifyEmailPage";
 import { PrivacyPolicyPage } from "./pages/PrivacyPolicyPage";
+import { CompleteGoogleSignupPage } from "./pages/CompleteGoogleSignupPage";
+import { PrivacyRequiredPage } from "./pages/PrivacyRequiredPage";
 import { ResetPassword } from "./pages/ResetPassword";
 import { Navbar } from "./components/Navbar";
 import { useAuthStore } from "./store/useAuthStore";
@@ -55,6 +57,8 @@ function App() {
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="/complete-google-signup" element={<CompleteGoogleSignupPage />} />
+        <Route path="/privacy-required" element={<PrivacyRequiredPage />} />
       </Routes>
 
       <Toaster />

@@ -303,4 +303,190 @@ describe('useAuthStore', () => {
             expect(useAuthStore.getState().isResettingPassword).toBe(false);
         });
     });
+
+    describe('verifyGoogleToken', () => {
+        it('should verify Google OAuth temp token and return user data', async () => {
+            // Arrange
+            const mockUserData = {
+                googleId: 'google-123',
+                email: 'test@example.com',
+                fullName: 'Test User',
+                profilePic: 'https://example.com/pic.jpg',
+                emailVerified: true
+            };
+            axiosInstance.get.mockResolvedValue({ data: mockUserData });
+
+            // Act
+            const result = await useAuthStore.getState().verifyGoogleToken('temp-token-123');
+
+            // Assert
+            expect(axiosInstance.get).toHaveBeenCalledWith('/auth/google/verify-token?token=temp-token-123');
+            expect(result.success).toBe(true);
+            expect(result.data).toEqual(mockUserData);
+        });
+
+        it('should show error toast and return failure on invalid token', async () => {
+            // Arrange
+            const error = { response: { data: { message: 'Invalid or expired token' } } };
+            axiosInstance.get.mockRejectedValue(error);
+
+            // Act
+            const result = await useAuthStore.getState().verifyGoogleToken('invalid-token');
+
+            // Assert
+            expect(axiosInstance.get).toHaveBeenCalledWith('/auth/google/verify-token?token=invalid-token');
+            expect(toast.error).toHaveBeenCalledWith('Invalid or expired token');
+            expect(result.success).toBe(false);
+            expect(result.error).toBe('Invalid or expired token');
+        });
+    });
+
+    describe('completeGoogleSignup', () => {
+        it('should complete Google signup and set authUser on success', async () => {
+            // Arrange
+            const mockUser = {
+                _id: 'user-123',
+                fullName: 'Test User',
+                email: 'test@example.com',
+                profilePic: null
+            };
+            const signupData = {
+                tempToken: 'temp-token-123',
+                privacyPolicy: true,
+                fullName: 'Test User'
+            };
+            axiosInstance.post.mockResolvedValue({ data: mockUser });
+
+            // Act
+            const result = await useAuthStore.getState().completeGoogleSignup(signupData);
+
+            // Assert
+            expect(axiosInstance.post).toHaveBeenCalledWith('/auth/google/complete-signup', signupData);
+            expect(useAuthStore.getState().authUser).toEqual(mockUser);
+            expect(useAuthStore.getState().isSigningUp).toBe(false);
+            expect(toast.success).toHaveBeenCalledWith('Account created successfully!');
+            expect(result.success).toBe(true);
+        });
+
+        it('should show error toast on failure', async () => {
+            // Arrange
+            const error = { response: { data: { message: 'Token expired' } } };
+            axiosInstance.post.mockRejectedValue(error);
+
+            // Act
+            const result = await useAuthStore.getState().completeGoogleSignup({
+                tempToken: 'expired-token',
+                privacyPolicy: true
+            });
+
+            // Assert
+            expect(toast.error).toHaveBeenCalledWith('Token expired');
+            expect(useAuthStore.getState().authUser).toBeNull();
+            expect(useAuthStore.getState().isSigningUp).toBe(false);
+            expect(result.success).toBe(false);
+            expect(result.error).toBe('Token expired');
+        });
+
+        it('should set isSigningUp to true during request', async () => {
+            // Arrange
+            let capturedState;
+            axiosInstance.post.mockImplementation(() => {
+                capturedState = useAuthStore.getState().isSigningUp;
+                return Promise.resolve({ data: {} });
+            });
+
+            // Act
+            await useAuthStore.getState().completeGoogleSignup({
+                tempToken: 'token',
+                privacyPolicy: true
+            });
+
+            // Assert
+            expect(capturedState).toBe(true);
+            expect(useAuthStore.getState().isSigningUp).toBe(false);
+        });
+    });
+
+    describe('acceptPrivacyPolicy', () => {
+        it('should accept privacy policy and set authUser on success', async () => {
+            // Arrange
+            const mockUser = {
+                _id: 'user-123',
+                fullName: 'Test User',
+                email: 'test@example.com',
+                profilePic: null
+            };
+            const acceptData = {
+                email: 'test@example.com',
+                privacyPolicy: true
+            };
+            axiosInstance.post.mockResolvedValue({ data: mockUser });
+
+            // Act
+            const result = await useAuthStore.getState().acceptPrivacyPolicy(acceptData);
+
+            // Assert
+            expect(axiosInstance.post).toHaveBeenCalledWith('/auth/google/accept-privacy', acceptData);
+            expect(useAuthStore.getState().authUser).toEqual(mockUser);
+            expect(useAuthStore.getState().isLoggingIn).toBe(false);
+            expect(toast.success).toHaveBeenCalledWith('Privacy policy accepted!');
+            expect(result.success).toBe(true);
+        });
+
+        it('should show error toast on failure', async () => {
+            // Arrange
+            const error = { response: { data: { message: 'User not found' } } };
+            axiosInstance.post.mockRejectedValue(error);
+
+            // Act
+            const result = await useAuthStore.getState().acceptPrivacyPolicy({
+                email: 'notfound@example.com',
+                privacyPolicy: true
+            });
+
+            // Assert
+            expect(toast.error).toHaveBeenCalledWith('User not found');
+            expect(useAuthStore.getState().authUser).toBeNull();
+            expect(useAuthStore.getState().isLoggingIn).toBe(false);
+            expect(result.success).toBe(false);
+            expect(result.error).toBe('User not found');
+        });
+
+        it('should set isLoggingIn to true during request', async () => {
+            // Arrange
+            let capturedState;
+            axiosInstance.post.mockImplementation(() => {
+                capturedState = useAuthStore.getState().isLoggingIn;
+                return Promise.resolve({ data: {} });
+            });
+
+            // Act
+            await useAuthStore.getState().acceptPrivacyPolicy({
+                email: 'test@example.com',
+                privacyPolicy: true
+            });
+
+            // Assert
+            expect(capturedState).toBe(true);
+            expect(useAuthStore.getState().isLoggingIn).toBe(false);
+        });
+    });
+
+    describe('googleLogin', () => {
+        it('should redirect to Google OAuth endpoint', () => {
+            // Arrange
+            const originalLocation = window.location;
+            delete window.location;
+            window.location = { href: '' };
+
+            // Act
+            useAuthStore.getState().googleLogin();
+
+            // Assert
+            expect(window.location.href).toContain('/auth/google');
+
+            // Cleanup
+            window.location = originalLocation;
+        });
+    });
 });

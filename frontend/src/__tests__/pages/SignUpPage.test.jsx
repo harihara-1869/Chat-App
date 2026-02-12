@@ -201,6 +201,10 @@ describe('SignUpPage', () => {
             await user.type(screen.getByPlaceholderText('you@example.com'), 'test@example.com');
             await user.type(screen.getByPlaceholderText('••••••••'), 'password123');
 
+            // Check privacy policy checkbox
+            const privacyCheckbox = screen.getByLabelText(/I agree to the/i);
+            await user.click(privacyCheckbox);
+
             // Submit
             const submitButton = document.querySelector('button[type="submit"]');
             await user.click(submitButton);
@@ -211,7 +215,7 @@ describe('SignUpPage', () => {
             });
         });
 
-        it('should call signup with form data', async () => {
+        it('should call signup with form data including privacy policy', async () => {
             mockSignup.mockResolvedValueOnce({ success: true });
             const user = userEvent.setup();
             renderSignUpPage();
@@ -220,6 +224,10 @@ describe('SignUpPage', () => {
             await user.type(screen.getByPlaceholderText('you@example.com'), 'myemail@test.com');
             await user.type(screen.getByPlaceholderText('••••••••'), 'password123');
 
+            // Check privacy policy checkbox
+            const privacyCheckbox = screen.getByLabelText(/I agree to the/i);
+            await user.click(privacyCheckbox);
+
             const submitButton = document.querySelector('button[type="submit"]');
             await user.click(submitButton);
 
@@ -227,7 +235,8 @@ describe('SignUpPage', () => {
                 expect(mockSignup).toHaveBeenCalledWith({
                     fullName: 'Test User',
                     email: 'myemail@test.com',
-                    password: 'password123'
+                    password: 'password123',
+                    privacyPolicy: true
                 });
             });
         });
@@ -240,6 +249,10 @@ describe('SignUpPage', () => {
             await user.type(screen.getByPlaceholderText('John Doe'), 'Test User');
             await user.type(screen.getByPlaceholderText('you@example.com'), 'test@example.com');
             await user.type(screen.getByPlaceholderText('••••••••'), 'password123');
+
+            // Check privacy policy checkbox
+            const privacyCheckbox = screen.getByLabelText(/I agree to the/i);
+            await user.click(privacyCheckbox);
 
             const submitButton = document.querySelector('button[type="submit"]');
             await user.click(submitButton);

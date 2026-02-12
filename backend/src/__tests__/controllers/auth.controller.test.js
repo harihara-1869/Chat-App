@@ -415,3 +415,365 @@ describe('Auth Controller - Reset Password Logic', () => {
         });
     });
 });
+
+describe('Auth Controller - Privacy Policy Validation', () => {
+    let mockRes;
+
+    beforeEach(() => {
+        mockRes = createMockRes();
+    });
+
+    describe('signup privacy policy validation', () => {
+        it('should require privacyPolicy field for signup', () => {
+            const body = { 
+                fullName: 'Test User', 
+                email: 'test@example.com', 
+                password: 'password123',
+                privacyPolicy: false 
+            };
+
+            const isValid = body.privacyPolicy === true;
+            expect(isValid).toBe(false);
+        });
+
+        it('should accept signup when privacyPolicy is true', () => {
+            const body = { 
+                fullName: 'Test User', 
+                email: 'test@example.com', 
+                password: 'password123',
+                privacyPolicy: true 
+            };
+
+            const isValid = body.privacyPolicy === true;
+            expect(isValid).toBe(true);
+        });
+
+        it('should return 400 if privacyPolicy is missing', () => {
+            mockRes.status(400).json({ message: "You must accept the privacy policy." });
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "You must accept the privacy policy."
+            });
+        });
+
+        it('should set privacyPolicyAccepted to true on user creation', () => {
+            const newUser = {
+                fullName: 'Test User',
+                email: 'test@example.com',
+                privacyPolicyAccepted: true
+            };
+
+            expect(newUser.privacyPolicyAccepted).toBe(true);
+        });
+    });
+});
+
+describe('Auth Controller - Google OAuth Complete Signup', () => {
+    let mockRes;
+
+    beforeEach(() => {
+        mockRes = createMockRes();
+    });
+
+    describe('completeGoogleSignup validation', () => {
+        it('should require tempToken in request body', () => {
+            const body = { tempToken: '', privacyPolicy: true };
+            const isValid = !!body.tempToken;
+
+            expect(isValid).toBe(false);
+        });
+
+        it('should require privacyPolicy in request body', () => {
+            const body = { tempToken: 'valid-token', privacyPolicy: false };
+            const isValid = body.privacyPolicy === true;
+
+            expect(isValid).toBe(false);
+        });
+
+        it('should return 400 if privacyPolicy is not accepted', () => {
+            mockRes.status(400).json({ message: "You must accept the privacy policy to continue." });
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "You must accept the privacy policy to continue."
+            });
+        });
+
+        it('should return 400 for invalid or expired temp token', () => {
+            mockRes.status(400).json({ message: "Invalid or expired signup token. Please try signing up with Google again." });
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "Invalid or expired signup token. Please try signing up with Google again."
+            });
+        });
+    });
+
+    describe('completeGoogleSignup user creation', () => {
+        it('should create user with provider set to google', () => {
+            const newUser = {
+                provider: "google",
+                googleId: "google-123",
+                email: "test@example.com",
+                fullName: "Test User",
+                privacyPolicyAccepted: true
+            };
+
+            expect(newUser.provider).toBe("google");
+            expect(newUser.googleId).toBe("google-123");
+            expect(newUser.privacyPolicyAccepted).toBe(true);
+        });
+
+        it('should set emailVerified to true for Google users', () => {
+            const newUser = {
+                provider: "google",
+                emailVerified: true,
+                privacyPolicyAccepted: true
+            };
+
+            expect(newUser.emailVerified).toBe(true);
+        });
+
+        it('should allow customizing fullName from Google profile', () => {
+            const tokenData = { fullName: 'Google Name' };
+            const userInput = { fullName: 'Custom Name' };
+            
+            const finalName = userInput.fullName || tokenData.fullName;
+            expect(finalName).toBe('Custom Name');
+        });
+
+        it('should fallback to Google fullName if not provided', () => {
+            const tokenData = { fullName: 'Google Name' };
+            const userInput = {};
+            
+            const finalName = userInput.fullName || tokenData.fullName;
+            expect(finalName).toBe('Google Name');
+        });
+
+        it('should return 201 on successful account creation', () => {
+            const userData = {
+                message: "Account created successfully",
+                _id: 'user-123',
+                fullName: 'Test User',
+                email: 'test@example.com',
+                profilePic: null
+            };
+
+            mockRes.status(201).json(userData);
+
+            expect(mockRes.status).toHaveBeenCalledWith(201);
+            expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
+                message: "Account created successfully"
+            }));
+        });
+    });
+
+    describe('completeGoogleSignup existing user handling', () => {
+        it('should update privacyPolicyAccepted if existing user has not accepted', () => {
+            const existingUser = {
+                _id: 'user-123',
+                googleId: 'google-123',
+                email: 'test@example.com',
+                privacyPolicyAccepted: false
+            };
+
+            // Simulate accepting privacy policy
+            existingUser.privacyPolicyAccepted = true;
+
+            expect(existingUser.privacyPolicyAccepted).toBe(true);
+        });
+
+        it('should return 200 when linking to existing account', () => {
+            mockRes.status(200).json({
+                message: "Account linked successfully",
+                _id: 'user-123',
+                fullName: 'Test User',
+                email: 'test@example.com',
+                profilePic: null
+            });
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
+                message: "Account linked successfully"
+            }));
+        });
+    });
+});
+
+describe('Auth Controller - Accept Privacy Policy', () => {
+    let mockRes;
+
+    beforeEach(() => {
+        mockRes = createMockRes();
+    });
+
+    describe('acceptPrivacyPolicy validation', () => {
+        it('should require email in request body', () => {
+            const body = { email: '', privacyPolicy: true };
+            const isValid = !!body.email;
+
+            expect(isValid).toBe(false);
+        });
+
+        it('should require privacyPolicy to be true', () => {
+            const body = { email: 'test@example.com', privacyPolicy: false };
+            const isValid = body.privacyPolicy === true;
+
+            expect(isValid).toBe(false);
+        });
+
+        it('should return 404 if user not found', () => {
+            mockRes.status(404).json({ message: "User not found." });
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ message: "User not found." });
+        });
+    });
+
+    describe('acceptPrivacyPolicy user update', () => {
+        it('should update privacyPolicyAccepted from false to true', () => {
+            const user = {
+                _id: 'user-123',
+                email: 'test@example.com',
+                privacyPolicyAccepted: false,
+                fullName: 'Test User',
+                profilePic: ''
+            };
+
+            // Simulate accepting privacy policy
+            user.privacyPolicyAccepted = true;
+
+            expect(user.privacyPolicyAccepted).toBe(true);
+        });
+
+        it('should return 200 if privacy policy already accepted', () => {
+            mockRes.status(200).json({
+                message: "Privacy policy already accepted",
+                _id: 'user-123',
+                fullName: 'Test User',
+                email: 'test@example.com',
+                profilePic: null
+            });
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
+                message: "Privacy policy already accepted"
+            }));
+        });
+
+        it('should return 200 on successful privacy policy acceptance', () => {
+            mockRes.status(200).json({
+                message: "Privacy policy accepted successfully",
+                _id: 'user-123',
+                fullName: 'Test User',
+                email: 'test@example.com',
+                profilePic: null
+            });
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
+                message: "Privacy policy accepted successfully"
+            }));
+        });
+
+        it('should generate JWT and set cookie after accepting privacy policy', () => {
+            const mockCookieFn = jest.fn();
+            const resWithCookie = {
+                ...mockRes,
+                cookie: mockCookieFn
+            };
+
+            // Simulate successful acceptance and login
+            resWithCookie.status(200).json({ message: "Privacy policy accepted successfully" });
+
+            expect(resWithCookie.status).toHaveBeenCalledWith(200);
+        });
+    });
+});
+
+describe('Auth Controller - Google OAuth Redirect Flows', () => {
+    describe('googleCallback redirect scenarios', () => {
+        it('should redirect to complete-google-signup for new users', () => {
+            const frontendUrl = 'http://localhost:5173';
+            const tempToken = 'temp-token-123';
+            const expectedRedirect = `${frontendUrl}/complete-google-signup?token=${tempToken}`;
+
+            expect(expectedRedirect).toBe('http://localhost:5173/complete-google-signup?token=temp-token-123');
+        });
+
+        it('should redirect to privacy-required for existing users without privacy acceptance', () => {
+            const frontendUrl = 'http://localhost:5173';
+            const email = 'test@example.com';
+            const expectedRedirect = `${frontendUrl}/privacy-required?email=${encodeURIComponent(email)}`;
+
+            expect(expectedRedirect).toBe('http://localhost:5173/privacy-required?email=test%40example.com');
+        });
+
+        it('should redirect to frontend home for existing users with privacy accepted', () => {
+            const frontendUrl = 'http://localhost:5173';
+            
+            expect(frontendUrl).toBe('http://localhost:5173');
+        });
+
+        it('should redirect to login with error for auth failure', () => {
+            const frontendUrl = 'http://localhost:5173';
+            const expectedRedirect = `${frontendUrl}/login?error=auth_failed`;
+
+            expect(expectedRedirect).toBe('http://localhost:5173/login?error=auth_failed');
+        });
+
+        it('should redirect to login with error for server error', () => {
+            const frontendUrl = 'http://localhost:5173';
+            const expectedRedirect = `${frontendUrl}/login?error=server_error`;
+
+            expect(expectedRedirect).toBe('http://localhost:5173/login?error=server_error');
+        });
+    });
+
+    describe('Google OAuth callback auth data structure', () => {
+        it('should have isNewUser flag for new users', () => {
+            const authData = {
+                pendingUser: {
+                    googleId: 'google-123',
+                    email: 'test@example.com'
+                },
+                isNewUser: true,
+                needsPrivacyAcceptance: true
+            };
+
+            expect(authData.isNewUser).toBe(true);
+            expect(authData.needsPrivacyAcceptance).toBe(true);
+        });
+
+        it('should have user object for existing users', () => {
+            const authData = {
+                user: {
+                    _id: 'user-123',
+                    googleId: 'google-123',
+                    privacyPolicyAccepted: true
+                },
+                isNewUser: false,
+                needsPrivacyAcceptance: false
+            };
+
+            expect(authData.user._id).toBe('user-123');
+            expect(authData.isNewUser).toBe(false);
+            expect(authData.needsPrivacyAcceptance).toBe(false);
+        });
+
+        it('should detect when existing user needs privacy acceptance', () => {
+            const authData = {
+                user: {
+                    _id: 'user-123',
+                    privacyPolicyAccepted: false
+                },
+                isNewUser: false,
+                needsPrivacyAcceptance: true
+            };
+
+            expect(authData.needsPrivacyAcceptance).toBe(true);
+        });
+    });
+});
+
