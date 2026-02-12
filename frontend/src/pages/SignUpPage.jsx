@@ -9,6 +9,7 @@ import {
   Eye,
   EyeOff,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import AuthImagePattern from "../components/AuthImagePattern";
 import toast from "react-hot-toast";
@@ -19,6 +20,7 @@ export const SignUpPage = () => {
     fullName: "",
     email: "",
     password: "",
+    privacyPolicy: false,
   });
   const [isSignupSuccess, setIsSignupSuccess] = React.useState(false);
 
@@ -34,6 +36,8 @@ export const SignUpPage = () => {
     if (!formData.password.trim()) return toast.error("Password is required");
     if (formData.password.length < 6)
       return toast.error("Password must be at least 6 characters long");
+    if (!formData.privacyPolicy)
+      return toast.error("You must accept the Privacy Policy");
 
     return true;
   };
@@ -69,6 +73,19 @@ export const SignUpPage = () => {
                 Get started with your free account
               </p>
             </div>
+          </div>
+
+          {/* Disclaimer */}
+          <div className="alert alert-warning text-sm shadow-sm">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>
+              Messages are stored in plain text and are not end-to-end encrypted.
+              Please read our{" "}
+              <Link to="/privacy-policy" target="_blank" className="link font-semibold">
+                Privacy Policy
+              </Link>{" "}
+              before signing up.
+            </span>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -141,6 +158,30 @@ export const SignUpPage = () => {
                   )}
                 </button>
               </div>
+            </div>
+
+            {/* Privacy Policy Checkbox */}
+            <div className="form-control">
+              <label className="label cursor-pointer justify-start gap-3">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-primary checkbox-sm"
+                  checked={formData.privacyPolicy}
+                  onChange={(e) =>
+                    setFormData({ ...formData, privacyPolicy: e.target.checked })
+                  }
+                />
+                <span className="label-text">
+                  I agree to the{" "}
+                  <Link
+                    to="/privacy-policy"
+                    target="_blank"
+                    className="link link-primary"
+                  >
+                    Privacy Policy
+                  </Link>
+                </span>
+              </label>
             </div>
 
             <button
