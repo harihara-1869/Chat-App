@@ -42,6 +42,7 @@ export const signup = async (req, res) => {
     // Generate verification token
     const verificationToken = crypto.randomBytes(32).toString("hex");
     const verificationTokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+    const accountExpiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 day cleanup
 
     const newUser = new User({
       fullName,
@@ -50,6 +51,7 @@ export const signup = async (req, res) => {
       verificationToken,
       verificationTokenExpiresAt,
       privacyPolicyAccepted: true,
+      accountExpiresAt,
     });
 
     if (newUser) {
@@ -137,6 +139,7 @@ export const verifyEmail = async (req, res) => {
     user.emailVerified = true;
     user.verificationToken = undefined;
     user.verificationTokenExpiresAt = undefined;
+    user.accountExpiresAt = null;
     await user.save();
 
     // Login user immediately after verification
