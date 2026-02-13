@@ -407,8 +407,8 @@ describe('useAuthStore', () => {
         });
     });
 
-    describe('acceptPrivacyPolicy', () => {
-        it('should accept privacy policy and set authUser on success', async () => {
+    describe('acceptPolicies', () => {
+        it('should accept policies and set authUser on success', async () => {
             // Arrange
             const mockUser = {
                 _id: 'user-123',
@@ -418,18 +418,19 @@ describe('useAuthStore', () => {
             };
             const acceptData = {
                 email: 'test@example.com',
-                privacyPolicy: true
+                privacyPolicy: true,
+                termsAndConditions: true
             };
             axiosInstance.post.mockResolvedValue({ data: mockUser });
 
             // Act
-            const result = await useAuthStore.getState().acceptPrivacyPolicy(acceptData);
+            const result = await useAuthStore.getState().acceptPolicies(acceptData);
 
             // Assert
-            expect(axiosInstance.post).toHaveBeenCalledWith('/auth/google/accept-privacy', acceptData);
+            expect(axiosInstance.post).toHaveBeenCalledWith('/auth/google/accept-policies', acceptData);
             expect(useAuthStore.getState().authUser).toEqual(mockUser);
             expect(useAuthStore.getState().isLoggingIn).toBe(false);
-            expect(toast.success).toHaveBeenCalledWith('Privacy policy accepted!');
+            expect(toast.success).toHaveBeenCalledWith('Policies accepted successfully!');
             expect(result.success).toBe(true);
         });
 
@@ -439,9 +440,10 @@ describe('useAuthStore', () => {
             axiosInstance.post.mockRejectedValue(error);
 
             // Act
-            const result = await useAuthStore.getState().acceptPrivacyPolicy({
+            const result = await useAuthStore.getState().acceptPolicies({
                 email: 'notfound@example.com',
-                privacyPolicy: true
+                privacyPolicy: true,
+                termsAndConditions: true
             });
 
             // Assert
@@ -461,9 +463,10 @@ describe('useAuthStore', () => {
             });
 
             // Act
-            await useAuthStore.getState().acceptPrivacyPolicy({
+            await useAuthStore.getState().acceptPolicies({
                 email: 'test@example.com',
-                privacyPolicy: true
+                privacyPolicy: true,
+                termsAndConditions: true
             });
 
             // Assert

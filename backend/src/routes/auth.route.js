@@ -9,7 +9,7 @@ import {
   resetPassword, 
   updatePassword,
   completeGoogleSignup,
-  acceptPrivacyPolicy,
+  acceptPolicies,
   verifyGoogleToken 
 } from '../controllers/auth.controller.js';
 import { protectRoute } from '../middleware/auth.middleware.js';
@@ -33,7 +33,7 @@ router.post('/update-password', strictRateLimiter, updatePassword);
 // Google OAuth completion routes
 router.get('/google/verify-token', authRateLimiter, verifyGoogleToken);
 router.post('/google/complete-signup', authRateLimiter, completeGoogleSignup);
-router.post('/google/accept-privacy', authRateLimiter, acceptPrivacyPolicy);
+router.post('/google/accept-policies', authRateLimiter, acceptPolicies);
 
 // Google OAuth routes
 router.get('/google', authRateLimiter, passport.authenticate('google', {

@@ -11,94 +11,156 @@ import {
     Mail,
     FileText,
     Info,
+    Cloud,
+    Globe,
+    Baby,
+    RefreshCw,
 } from "lucide-react";
 
 export const PrivacyPolicyContent = ({ showContact = true }) => {
     const sections = [
         {
             icon: <Eye className="w-5 h-5 text-primary" />,
-            title: "Information We Collect",
-            intro: "We may collect the following information:",
-            bullets: [
-                "Name",
-                "Email address (for account verification)",
-                "Messages sent within the application",
-                "Images uploaded by users",
-                "Basic technical logs (such as login timestamps or IP logs, if applicable)",
+            title: "1. Information We Collect",
+            intro: "We may collect the following categories of information:",
+            subsections: [
+                {
+                    title: "1.1 Account Information",
+                    bullets: [
+                        "Name",
+                        "Email address",
+                        "Profile picture (if provided)",
+                        "Authentication provider information (e.g., Google ID)",
+                    ],
+                },
+                {
+                    title: "1.2 Communication Data",
+                    bullets: [
+                        "Messages sent through the Platform",
+                        "Images uploaded by users",
+                    ],
+                    warning: "Messages are stored in plain text format and are not end-to-end encrypted.",
+                },
+                {
+                    title: "1.3 Technical Information",
+                    bullets: [
+                        "IP address",
+                        "Browser type",
+                        "Device information",
+                        "Basic usage logs",
+                    ],
+                    note: "This information may be automatically collected for security and operational purposes.",
+                },
             ],
-        },
-        {
-            icon: <Database className="w-5 h-5 text-primary" />,
-            title: "How Information Is Stored",
-            bullets: [
-                "Messages are stored in plain text.",
-                "Uploaded images are stored and accessible via public URLs.",
-                "Account details are stored in a database for authentication purposes.",
-            ],
-            warning: "This application does NOT provide end-to-end encryption.",
         },
         {
             icon: <Target className="w-5 h-5 text-primary" />,
-            title: "Purpose of Data Collection",
-            intro: "Your information is used solely for:",
+            title: "2. How We Use Your Information",
+            intro: "We use collected information to:",
             bullets: [
-                "Account creation and verification",
-                "Providing chat functionality",
-                "Demonstrating application features",
-                "Improving the project for learning purposes",
+                "Create and manage user accounts",
+                "Enable messaging functionality",
+                "Store and display uploaded images",
+                "Maintain platform security",
+                "Monitor technical performance",
+                "Comply with legal obligations",
             ],
-            note: "This project is non-commercial.",
+            note: "We do not sell, rent, or commercially trade your personal data.",
+        },
+        {
+            icon: <Cloud className="w-5 h-5 text-primary" />,
+            title: "3. Image Hosting and Third-Party Services",
+            paragraphs: [
+                "Uploaded images may be stored using third-party cloud storage providers such as Cloudinary.",
+            ],
+            intro2: "Images:",
+            bullets: [
+                "May be accessible via publicly accessible URLs",
+                "Are subject to the third-party provider's infrastructure and policies",
+            ],
+            warning: "We are not responsible for the independent privacy practices of third-party services. Users are advised not to upload sensitive or confidential content.",
         },
         {
             icon: <Lock className="w-5 h-5 text-primary" />,
-            title: "Data Security",
-            paragraphs: [
-                "Reasonable efforts are made to protect basic account information. However, this application is not production-grade and should not be considered secure for confidential communication.",
-                "Users are strongly advised not to share sensitive personal information.",
+            title: "4. Data Storage and Security",
+            intro: "We implement reasonable technical and organizational safeguards to protect user information.",
+            intro2: "However:",
+            bullets: [
+                "Messages are stored in plain text",
+                "Internet transmission carries inherent risks",
+                "No system can guarantee absolute security",
             ],
+            warning: "Users should avoid sharing highly sensitive personal information through the Platform.",
         },
         {
             icon: <Users className="w-5 h-5 text-primary" />,
-            title: "Data Sharing",
-            paragraphs: [
-                "No personal data is sold, rented, or shared with third parties for marketing purposes.",
-            ],
-            intro2: "Data will only be disclosed:",
+            title: "5. Data Sharing",
+            intro: "We may share information only in the following situations:",
             bullets: [
-                "If required by applicable Indian law",
-                "To comply with legal obligations",
+                "With hosting or infrastructure providers strictly for service operation",
+                "When required by law, court order, or governmental authority",
+                "To protect the rights, safety, or integrity of the Platform",
+            ],
+            note: "We do not intentionally disclose personal data to unrelated third parties for marketing or advertising.",
+        },
+        {
+            icon: <Database className="w-5 h-5 text-primary" />,
+            title: "6. Data Retention",
+            intro: "We retain personal data:",
+            bullets: [
+                "For as long as your account remains active",
+                "For operational, security, or legal purposes",
+            ],
+            warning: "As this is a demo application, data may be deleted, reset, or removed at any time without prior notice. Users may request deletion of their account by contacting us.",
+        },
+        {
+            icon: <Scale className="w-5 h-5 text-primary" />,
+            title: "7. Your Rights (Under Indian Law)",
+            intro: "In accordance with applicable Indian data protection principles, including the Digital Personal Data Protection Act, 2023, you may have the right to:",
+            bullets: [
+                "Request access to your personal data",
+                "Request correction of inaccurate information",
+                "Request deletion of your personal data",
+                "Withdraw consent for data processing",
+            ],
+            note: "Requests may be sent to: harihara1869@gmail.com - We will respond within a reasonable time.",
+        },
+        {
+            icon: <Baby className="w-5 h-5 text-primary" />,
+            title: "8. Children's Privacy",
+            paragraphs: [
+                "This Platform is not intended for individuals under 18 years of age.",
+                "We do not knowingly collect personal data from minors.",
+                "If we become aware that a minor has provided personal information, we may delete such data.",
+            ],
+        },
+        {
+            icon: <Globe className="w-5 h-5 text-primary" />,
+            title: "9. International Data Transfers",
+            paragraphs: [
+                "If third-party infrastructure providers store data outside India, your data may be transferred to and processed in other jurisdictions.",
+                "By using the Platform, you consent to such transfers where necessary for service operation.",
             ],
         },
         {
             icon: <AlertTriangle className="w-5 h-5 text-warning" />,
-            title: "User Responsibility",
-            intro: "Users are responsible for the information they choose to share on this platform.",
-            intro2: "Do not upload or share:",
+            title: "10. Disclaimer (Demo Nature)",
+            intro: "This Platform is a demo and portfolio project.",
+            intro2: "It is not intended for production-grade confidential communications.",
+            intro3: "Users acknowledge that:",
             bullets: [
-                "Financial information",
-                "Government identification numbers",
-                "Passwords",
-                "Confidential business information",
-                "Any sensitive personal data",
+                "Security features may be limited",
+                "The Platform may be modified or discontinued at any time",
+                "Data may be deleted as part of development or maintenance",
             ],
         },
         {
-            icon: <Clock className="w-5 h-5 text-primary" />,
-            title: "Data Retention",
+            icon: <RefreshCw className="w-5 h-5 text-primary" />,
+            title: "11. Changes to This Policy",
             paragraphs: [
-                "User data may be retained as long as the project remains active. Users may request account deletion by contacting the developer.",
+                "We may update this Privacy Policy at any time.",
+                "Continued use of the Platform after changes constitutes acceptance of the revised Policy.",
             ],
-        },
-        {
-            icon: <Scale className="w-5 h-5 text-primary" />,
-            title: "Your Rights",
-            intro: "Under applicable Indian data protection laws, users may request:",
-            bullets: [
-                "Access to their personal data",
-                "Correction of inaccurate information",
-                "Deletion of their account data",
-            ],
-            note: "Requests may be made by contacting the developer (see below).",
         },
     ];
 
@@ -112,7 +174,7 @@ export const PrivacyPolicyContent = ({ showContact = true }) => {
                 <div>
                     <h1 className="text-2xl font-bold">Privacy Policy</h1>
                     <p className="text-base-content/60 text-sm">
-                        Last Updated: February 12, 2026
+                        Effective Date: February 13, 2026
                     </p>
                 </div>
             </div>
@@ -127,13 +189,18 @@ export const PrivacyPolicyContent = ({ showContact = true }) => {
                         <h2 className="card-title text-lg">Introduction</h2>
                     </div>
                     <p className="text-base-content/80 leading-relaxed ml-1">
-                        This application is a personal portfolio and demonstration chat
-                        application created for educational and resume purposes. This
-                        Privacy Policy explains how user information is collected, used,
-                        and stored.
+                        This Privacy Policy describes how Talkio ("Platform", "we", "our", or "us")
+                        collects, uses, and protects your information.
                     </p>
                     <p className="text-base-content/80 leading-relaxed ml-1 mt-2">
-                        By using this application, you agree to this Privacy Policy.
+                        The Platform is operated by P R Hari Hara Sai Pratham, located in India.
+                    </p>
+                    <p className="text-base-content/80 leading-relaxed ml-1 mt-2">
+                        This Platform is a demo and portfolio project developed for demonstration
+                        and educational purposes.
+                    </p>
+                    <p className="text-base-content/80 leading-relaxed ml-1 mt-2 font-medium">
+                        By using the Platform, you agree to this Privacy Policy.
                     </p>
                 </div>
             </div>
@@ -177,8 +244,58 @@ export const PrivacyPolicyContent = ({ showContact = true }) => {
                             </p>
                         )}
 
+                        {/* Tertiary intro */}
+                        {section.intro3 && (
+                            <p className="text-base-content/80 leading-relaxed ml-1 mb-2 font-medium">
+                                {section.intro3}
+                            </p>
+                        )}
+
+                        {/* Subsections */}
+                        {section.subsections &&
+                            section.subsections.map((subsection, subIndex) => (
+                                <div key={subIndex} className="mb-4 ml-1">
+                                    <h3 className="font-semibold text-base-content/90 mb-2">
+                                        {subsection.title}
+                                    </h3>
+
+                                    {subsection.intro && (
+                                        <p className="text-base-content/80 leading-relaxed mb-2">
+                                            {subsection.intro}
+                                        </p>
+                                    )}
+
+                                    {subsection.bullets && (
+                                        <ul className="space-y-2">
+                                            {subsection.bullets.map((item, i) => (
+                                                <li
+                                                    key={i}
+                                                    className="flex gap-3 text-base-content/80"
+                                                >
+                                                    <span className="text-primary mt-1 shrink-0">•</span>
+                                                    <span className="leading-relaxed">{item}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+
+                                    {subsection.warning && (
+                                        <div className="alert alert-warning mt-3 text-sm">
+                                            <AlertTriangle className="w-4 h-4 shrink-0" />
+                                            <span>{subsection.warning}</span>
+                                        </div>
+                                    )}
+
+                                    {subsection.note && (
+                                        <p className="text-base-content/60 text-sm mt-2 italic">
+                                            {subsection.note}
+                                        </p>
+                                    )}
+                                </div>
+                            ))}
+
                         {/* Bullet list */}
-                        {section.bullets && (
+                        {section.bullets && !section.subsections && (
                             <ul className="space-y-2 ml-1">
                                 {section.bullets.map((item, i) => (
                                     <li
@@ -225,27 +342,11 @@ export const PrivacyPolicyContent = ({ showContact = true }) => {
                         </p>
                         <div className="ml-1 mt-2 space-y-1">
                             <p className="text-base-content/80">P R Hari Hara Sai Pratham</p>
-                            <p className="text-base-content/80">harihara1869@gmail.com</p>
+                            <p className="text-base-content/80">📧 harihara1869@gmail.com</p>
                         </div>
                     </div>
                 </div>
             )}
-
-            {/* Changes to Policy */}
-            <div className="card bg-base-100 shadow-md">
-                <div className="card-body">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                            <FileText className="w-5 h-5 text-primary" />
-                        </div>
-                        <h2 className="card-title text-lg">Changes to This Policy</h2>
-                    </div>
-                    <p className="text-base-content/80 leading-relaxed ml-1">
-                        This Privacy Policy may be updated at any time. Continued use of
-                        the application constitutes acceptance of any changes.
-                    </p>
-                </div>
-            </div>
         </div>
     );
 };

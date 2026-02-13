@@ -185,17 +185,17 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // Accept privacy policy for existing Google OAuth users
-  acceptPrivacyPolicy: async (data) => {
+  // Accept policies for existing Google OAuth users
+  acceptPolicies: async (data) => {
     set({ isLoggingIn: true });
     try {
-      const res = await axiosInstance.post("/auth/google/accept-privacy", data);
+      const res = await axiosInstance.post("/auth/google/accept-policies", data);
       set({ authUser: res.data });
-      toast.success("Privacy policy accepted!");
+      toast.success("Policies accepted successfully!");
       get().connectSocket();
       return { success: true };
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to accept privacy policy");
+      toast.error(error.response?.data?.message || "Failed to accept policies");
       return { success: false, error: error.response?.data?.message };
     } finally {
       set({ isLoggingIn: false });

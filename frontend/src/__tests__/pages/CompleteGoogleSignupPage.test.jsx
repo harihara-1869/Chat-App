@@ -172,7 +172,7 @@ describe('CompleteGoogleSignupPage', () => {
             });
         });
 
-        it('should display privacy policy checkbox', async () => {
+        it('should display policies checkbox', async () => {
             // Act
             render(
                 <MemoryRouter initialEntries={['/complete-google-signup?token=valid-token-123']}>
@@ -186,10 +186,11 @@ describe('CompleteGoogleSignupPage', () => {
             await waitFor(() => {
                 expect(screen.getByLabelText(/I agree to the/i)).toBeInTheDocument();
                 expect(screen.getByText('Privacy Policy')).toBeInTheDocument();
+                expect(screen.getByText('Terms and Conditions')).toBeInTheDocument();
             });
         });
 
-        it('should have privacy policy link that opens in new tab', async () => {
+        it('should have policy links that open in new tab', async () => {
             // Act
             render(
                 <MemoryRouter initialEntries={['/complete-google-signup?token=valid-token-123']}>
@@ -205,6 +206,11 @@ describe('CompleteGoogleSignupPage', () => {
                 expect(privacyLink).toHaveAttribute('href', '/privacy-policy');
                 expect(privacyLink).toHaveAttribute('target', '_blank');
                 expect(privacyLink).toHaveAttribute('rel', 'noopener noreferrer');
+                
+                const termsLink = screen.getByText('Terms and Conditions');
+                expect(termsLink).toHaveAttribute('href', '/terms-and-conditions');
+                expect(termsLink).toHaveAttribute('target', '_blank');
+                expect(termsLink).toHaveAttribute('rel', 'noopener noreferrer');
             });
         });
     });
@@ -224,7 +230,7 @@ describe('CompleteGoogleSignupPage', () => {
             });
         });
 
-        it('should show error if privacy policy is not accepted', async () => {
+        it('should show error if policies are not accepted', async () => {
             // Act
             render(
                 <MemoryRouter initialEntries={['/complete-google-signup?token=valid-token-123']}>
@@ -239,12 +245,12 @@ describe('CompleteGoogleSignupPage', () => {
                 expect(screen.getByText('Complete Your Profile')).toBeInTheDocument();
             });
 
-            // Submit without checking privacy policy
+            // Submit without checking policies
             const submitButton = screen.getByRole('button', { name: /Create Account/i });
             fireEvent.click(submitButton);
 
             // Assert
-            expect(toast.error).toHaveBeenCalledWith('You must accept the privacy policy to continue');
+            expect(toast.error).toHaveBeenCalledWith('You must accept the Privacy Policy and Terms and Conditions to continue');
             expect(mockCompleteGoogleSignup).not.toHaveBeenCalled();
         });
 
@@ -283,6 +289,7 @@ describe('CompleteGoogleSignupPage', () => {
                 expect(mockCompleteGoogleSignup).toHaveBeenCalledWith({
                     tempToken: 'valid-token-123',
                     privacyPolicy: true,
+                    termsAndConditions: true,
                     fullName: 'Custom Name'
                 });
             });

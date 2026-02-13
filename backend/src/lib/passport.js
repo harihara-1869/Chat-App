@@ -19,11 +19,12 @@ passport.use(
                 let user = await User.findOne({ googleId: profile.id });
 
                 if (user) {
-                    // User exists with this Google ID - check privacy policy
+                    // User exists with this Google ID - check if all policies accepted
+                    const needsPolicyAcceptance = !user.privacyPolicyAccepted || !user.termsAndConditionsAccepted;
                     return done(null, { 
                         user,
                         isNewUser: false,
-                        needsPrivacyAcceptance: !user.privacyPolicyAccepted 
+                        needsPrivacyAcceptance: needsPolicyAcceptance 
                     });
                 }
 
@@ -39,10 +40,11 @@ passport.use(
                         user.profilePic = profile.photos[0].value;
                     }
                     await user.save();
+                    const needsPolicyAcceptance = !user.privacyPolicyAccepted || !user.termsAndConditionsAccepted;
                     return done(null, { 
                         user,
                         isNewUser: false,
-                        needsPrivacyAcceptance: !user.privacyPolicyAccepted 
+                        needsPrivacyAcceptance: needsPolicyAcceptance 
                     });
                 }
 

@@ -7,14 +7,14 @@ import crypto from "crypto";
 import { env } from "process";
 
 export const signup = async (req, res) => {
-  const { fullName, email, password, privacyPolicy } = req.body;
+  const { fullName, email, password, privacyPolicy, termsAndConditions } = req.body;
   try {
-    if (!fullName || !email || !password || !privacyPolicy) {
+    if (!fullName || !email || !password || !privacyPolicy || !termsAndConditions) {
       return res.status(400).json({ message: "All fields are required." });
     }
 
-    if (!privacyPolicy) {
-      return res.status(400).json({ message: "You must accept the privacy policy." });
+    if (!privacyPolicy || !termsAndConditions) {
+      return res.status(400).json({ message: "You must accept the privacy policy and terms and conditions." });
     }
 
     if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -51,6 +51,8 @@ export const signup = async (req, res) => {
       verificationToken,
       verificationTokenExpiresAt,
       privacyPolicyAccepted: true,
+      termsAndConditionsAccepted: true,
+      acceptedPoliciesAt: new Date(),
       accountExpiresAt,
     });
 
@@ -192,8 +194,8 @@ export const googleCallback = (req, res) => {
     }
 
     if (needsPrivacyAcceptance) {
-      // Existing user needs to accept privacy policy
-      return res.redirect(`${frontendUrl}/privacy-required?email=${encodeURIComponent(user.email)}`);
+      // Existing user needs to accept policies
+      return res.redirect(`${frontendUrl}/accept-policies?email=${encodeURIComponent(user.email)}`);
     }
 
     // Existing user with privacy policy accepted - generate JWT and login
@@ -252,30 +254,30 @@ export const updatePassword = async (req, res) => {
 
 export const completeGoogleSignup = async (req, res) => {
   try {
-    const { tempToken, privacyPolicy, fullName } = req.body;
+    const { tempToken, privacyPolicy, termsAndConditions, fullName } = req.body;
 
-    if (!tempToken || !privacyPolicy) {
-      return res.status(400).json({ 
-        message: "Temp token and privacy policy acceptance are required." 
+    if (!tempToken || !privacyPolicy || !termsAndConditions) {
+      return res.status(400).json({
+        message: "Temp token and policy acceptance are required."
       });
     }
 
-    if (!privacyPolicy) {
-      return res.status(400).json({ 
-        message: "You must accept the privacy policy to continue." 
+    if (!privacyPolicy || !termsAndConditions) {
+      return res.status(400).json({
+        message: "You must accept the privacy policy and terms and conditions to continue."
       });
     }
 
     // Verify temp token
     const tokenData = verifyTempToken(tempToken);
     if (!tokenData) {
-      return res.status(400).json({ 
-        message: "Invalid or expired signup token. Please try signing up with Google again." 
+      return res.status(400).json({
+        message: "Invalid or expired signup token. Please try signing up with Google again."
       });
     }
 
     // Check if user already exists (double-check)
-    const existingUser = await User.findOne({ 
+    const existingUser = await User.findOne({
       $or: [
         { googleId: tokenData.googleId },
         { email: tokenData.email }
@@ -283,12 +285,14 @@ export const completeGoogleSignup = async (req, res) => {
     });
 
     if (existingUser) {
-      // User already exists - check if they need to accept privacy policy
-      if (!existingUser.privacyPolicyAccepted) {
+      // User already exists - check if they need to accept policies
+      if (!existingUser.privacyPolicyAccepted || !existingUser.termsAndConditionsAccepted) {
         existingUser.privacyPolicyAccepted = true;
+        existingUser.termsAndConditionsAccepted = true;
+        existingUser.acceptedPoliciesAt = new Date();
         await existingUser.save();
       }
-      
+
       generateToken(existingUser._id, res);
       return res.status(200).json({
         message: "Account linked successfully",
@@ -308,6 +312,8 @@ export const completeGoogleSignup = async (req, res) => {
       fullName: fullName || tokenData.fullName,
       profilePic: tokenData.profilePic || "",
       privacyPolicyAccepted: true,
+      termsAndConditionsAccepted: true,
+      acceptedPoliciesAt: new Date(),
     });
 
     await newUser.save();
@@ -328,48 +334,38 @@ export const completeGoogleSignup = async (req, res) => {
   }
 };
 
-export const acceptPrivacyPolicy = async (req, res) => {
+export const acceptPolicies = async (req, res) => {
   try {
-    const { email, privacyPolicy } = req.body;
+    const { email, privacyPolicy, termsAndConditions } = req.body;
 
-    if (!email || !privacyPolicy) {
-      return res.status(400).json({ 
-        message: "Email and privacy policy acceptance are required." 
+    if (!email || !privacyPolicy || !termsAndConditions) {
+      return res.status(400).json({
+        message: "Email and policy acceptance are required."
       });
     }
 
-    if (!privacyPolicy) {
-      return res.status(400).json({ 
-        message: "You must accept the privacy policy to continue." 
+    if (!privacyPolicy || !termsAndConditions) {
+      return res.status(400).json({
+        message: "You must accept the privacy policy and terms and conditions to continue."
       });
     }
 
     const user = await User.findOne({ email });
-    
+
     if (!user) {
       return res.status(404).json({ message: "User not found." });
     }
 
-    if (user.privacyPolicyAccepted) {
-      // Already accepted - just login
-      generateToken(user._id, res);
-      return res.status(200).json({
-        message: "Privacy policy already accepted",
-        _id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        profilePic: user.profilePic || null,
-      });
-    }
-
-    // Update user to accept privacy policy
+    // Update user to accept all policies
     user.privacyPolicyAccepted = true;
+    user.termsAndConditionsAccepted = true;
+    user.acceptedPoliciesAt = new Date();
     await user.save();
 
     // Generate JWT and login
     generateToken(user._id, res);
     return res.status(200).json({
-      message: "Privacy policy accepted successfully",
+      message: "Policies accepted successfully",
       _id: user._id,
       fullName: user.fullName,
       email: user.email,
@@ -377,7 +373,7 @@ export const acceptPrivacyPolicy = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error accepting privacy policy:", error);
+    console.error("Error accepting policies:", error);
     return res.status(500).json({ message: "Server error." });
   }
 };
@@ -394,8 +390,8 @@ export const verifyGoogleToken = async (req, res) => {
     // Verify temp token
     const tokenData = verifyTempToken(token);
     if (!tokenData) {
-      return res.status(400).json({ 
-        message: "Invalid or expired signup token. Please try signing up with Google again." 
+      return res.status(400).json({
+        message: "Invalid or expired signup token. Please try signing up with Google again."
       });
     }
 

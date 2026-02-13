@@ -54,6 +54,14 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    termsAndConditionsAccepted: {
+      type: Boolean,
+      default: false,
+    },
+    acceptedPoliciesAt: {
+      type: Date,
+      default: null,
+    },
     accountExpiresAt: {
       type: Date,
       default: null,

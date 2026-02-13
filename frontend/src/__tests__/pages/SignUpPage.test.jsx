@@ -215,7 +215,7 @@ describe('SignUpPage', () => {
             });
         });
 
-        it('should call signup with form data including privacy policy', async () => {
+        it('should call signup with form data including both policies', async () => {
             mockSignup.mockResolvedValueOnce({ success: true });
             const user = userEvent.setup();
             renderSignUpPage();
@@ -224,9 +224,9 @@ describe('SignUpPage', () => {
             await user.type(screen.getByPlaceholderText('you@example.com'), 'myemail@test.com');
             await user.type(screen.getByPlaceholderText('••••••••'), 'password123');
 
-            // Check privacy policy checkbox
-            const privacyCheckbox = screen.getByLabelText(/I agree to the/i);
-            await user.click(privacyCheckbox);
+            // Check policies checkbox
+            const policiesCheckbox = screen.getByLabelText(/I agree to the/i);
+            await user.click(policiesCheckbox);
 
             const submitButton = document.querySelector('button[type="submit"]');
             await user.click(submitButton);
@@ -236,7 +236,8 @@ describe('SignUpPage', () => {
                     fullName: 'Test User',
                     email: 'myemail@test.com',
                     password: 'password123',
-                    privacyPolicy: true
+                    privacyPolicy: true,
+                    termsAndConditions: true
                 });
             });
         });

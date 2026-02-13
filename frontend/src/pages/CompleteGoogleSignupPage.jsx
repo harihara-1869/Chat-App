@@ -24,6 +24,7 @@ export const CompleteGoogleSignupPage = () => {
     email: "",
     profilePic: "",
     privacyPolicy: false,
+    termsAndConditions: false,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -62,14 +63,15 @@ export const CompleteGoogleSignupPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.privacyPolicy) {
-      toast.error("You must accept the privacy policy to continue");
+    if (!formData.privacyPolicy || !formData.termsAndConditions) {
+      toast.error("You must accept the Privacy Policy and Terms and Conditions to continue");
       return;
     }
 
     const result = await completeGoogleSignup({
       tempToken: token,
       privacyPolicy: formData.privacyPolicy,
+      termsAndConditions: formData.termsAndConditions,
       fullName: formData.fullName,
     });
 
@@ -176,15 +178,19 @@ export const CompleteGoogleSignupPage = () => {
               </label>
             </div>
 
-            {/* Privacy Policy Checkbox */}
+            {/* Privacy Policy and Terms Checkbox */}
             <div className="form-control">
               <label className="label cursor-pointer justify-start gap-3">
                 <input
                   type="checkbox"
                   className="checkbox checkbox-primary checkbox-sm"
-                  checked={formData.privacyPolicy}
+                  checked={formData.privacyPolicy && formData.termsAndConditions}
                   onChange={(e) =>
-                    setFormData({ ...formData, privacyPolicy: e.target.checked })
+                    setFormData({ 
+                      ...formData, 
+                      privacyPolicy: e.target.checked,
+                      termsAndConditions: e.target.checked
+                    })
                   }
                 />
                 <span className="label-text">
@@ -196,6 +202,15 @@ export const CompleteGoogleSignupPage = () => {
                     className="link link-primary"
                   >
                     Privacy Policy
+                  </a>
+                  {" "}and{" "}
+                  <a
+                    href="/terms-and-conditions"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="link link-primary"
+                  >
+                    Terms and Conditions
                   </a>
                 </span>
               </label>

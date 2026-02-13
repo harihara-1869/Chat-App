@@ -21,6 +21,7 @@ export const SignUpPage = () => {
     email: "",
     password: "",
     privacyPolicy: false,
+    termsAndConditions: false,
   });
   const [isSignupSuccess, setIsSignupSuccess] = React.useState(false);
 
@@ -36,8 +37,8 @@ export const SignUpPage = () => {
     if (!formData.password.trim()) return toast.error("Password is required");
     if (formData.password.length < 6)
       return toast.error("Password must be at least 6 characters long");
-    if (!formData.privacyPolicy)
-      return toast.error("You must accept the Privacy Policy");
+    if (!formData.privacyPolicy || !formData.termsAndConditions)
+      return toast.error("You must accept the Privacy Policy and Terms and Conditions");
 
     return true;
   };
@@ -83,6 +84,10 @@ export const SignUpPage = () => {
               Please read our{" "}
               <Link to="/privacy-policy" target="_blank" className="link font-semibold">
                 Privacy Policy
+              </Link>{" "}
+              and{" "}
+              <Link to="/terms-and-conditions" target="_blank" className="link font-semibold">
+                Terms and Conditions
               </Link>{" "}
               before signing up.
             </span>
@@ -166,9 +171,13 @@ export const SignUpPage = () => {
                 <input
                   type="checkbox"
                   className="checkbox checkbox-primary checkbox-sm"
-                  checked={formData.privacyPolicy}
+                  checked={formData.privacyPolicy && formData.termsAndConditions}
                   onChange={(e) =>
-                    setFormData({ ...formData, privacyPolicy: e.target.checked })
+                    setFormData({ 
+                      ...formData, 
+                      privacyPolicy: e.target.checked, 
+                      termsAndConditions: e.target.checked 
+                    })
                   }
                 />
                 <span className="label-text">
@@ -179,6 +188,14 @@ export const SignUpPage = () => {
                     className="link link-primary"
                   >
                     Privacy Policy
+                  </Link>
+                  {" "}and{" "}
+                  <Link
+                    to="/terms-and-conditions"
+                    target="_blank"
+                    className="link link-primary"
+                  >
+                    Terms and Conditions
                   </Link>
                 </span>
               </label>
