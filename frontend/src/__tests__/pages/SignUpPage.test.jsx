@@ -199,7 +199,7 @@ describe('SignUpPage', () => {
             // Fill form
             await user.type(screen.getByPlaceholderText('John Doe'), 'Test User');
             await user.type(screen.getByPlaceholderText('you@example.com'), 'test@example.com');
-            await user.type(screen.getByPlaceholderText('••••••••'), 'password123');
+            await user.type(screen.getByPlaceholderText('••••••••'), 'Password123!');
 
             // Check privacy policy checkbox
             const privacyCheckbox = screen.getByLabelText(/I agree to the/i);
@@ -222,7 +222,7 @@ describe('SignUpPage', () => {
 
             await user.type(screen.getByPlaceholderText('John Doe'), 'Test User');
             await user.type(screen.getByPlaceholderText('you@example.com'), 'myemail@test.com');
-            await user.type(screen.getByPlaceholderText('••••••••'), 'password123');
+            await user.type(screen.getByPlaceholderText('••••••••'), 'Password123!');
 
             // Check policies checkbox
             const policiesCheckbox = screen.getByLabelText(/I agree to the/i);
@@ -235,7 +235,7 @@ describe('SignUpPage', () => {
                 expect(mockSignup).toHaveBeenCalledWith({
                     fullName: 'Test User',
                     email: 'myemail@test.com',
-                    password: 'password123',
+                    password: 'Password123!',
                     privacyPolicy: true,
                     termsAndConditions: true
                 });
@@ -249,7 +249,7 @@ describe('SignUpPage', () => {
 
             await user.type(screen.getByPlaceholderText('John Doe'), 'Test User');
             await user.type(screen.getByPlaceholderText('you@example.com'), 'test@example.com');
-            await user.type(screen.getByPlaceholderText('••••••••'), 'password123');
+            await user.type(screen.getByPlaceholderText('••••••••'), 'Password123!');
 
             // Check privacy policy checkbox
             const privacyCheckbox = screen.getByLabelText(/I agree to the/i);

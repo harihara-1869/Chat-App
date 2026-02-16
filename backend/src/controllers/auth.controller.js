@@ -23,6 +23,14 @@ export const signup = async (req, res) => {
       return res.status(400).json({ message: "Invalid email format." });
     }
 
+    if (email.length > 254) {
+      return res.status(400).json({ message: "Email is too long." });
+    }
+
+    if (fullName.length > 100) {
+      return res.status(400).json({ message: "Full name is too long." });
+    }
+
     if (!passwordRegex.test(password)) {
       return res
         .status(400)
@@ -260,17 +268,28 @@ export const resetPassword = async (req, res) => {
 export const updatePassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{10,}$/;
+    
+    // Validate password complexity
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({
+        message: "Password must be at least 10 characters long and contain at least one lowercase letter, one uppercase letter, one number, and one special character."
+      });
+    }
+    
     const user = await User.findOne({ resetPasswordToken: token, resetPasswordExpiresAt: { $gt: Date.now() } });
     if (!user) {
       return res.status(400).json({ message: "Invalid or expired token" })
     }
+    
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
     user.password = hashedPassword;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpiresAt = undefined;
     await user.save();
-    return res.status(200).json({ message: "Password updated successfully" })
+    
+    return res.status(200).json({ message: "Password updated successfully. Please log in with your new password." })
   } catch (error) {
     console.log("error in update password:", error);
     return res.status(500).json({ message: "Internal server error" });
@@ -301,38 +320,25 @@ export const completeGoogleSignup = async (req, res) => {
       });
     }
 
-    // Check if user already exists (double-check)
-    const existingUser = await User.findOne({
-      $or: [
-        { googleId: tokenData.googleId },
-        { email: tokenData.email }
-      ]
-    });
-
-    if (existingUser) {
-      // User already exists - check if they need to accept policies
-      if (!existingUser.privacyPolicyAccepted || !existingUser.termsAndConditionsAccepted) {
-        existingUser.privacyPolicyAccepted = true;
-        existingUser.termsAndConditionsAccepted = true;
-        existingUser.acceptedPoliciesAt = new Date();
-        await existingUser.save();
-      }
-
-      generateToken(existingUser._id, res);
-      return res.status(200).json({
-        message: "Account linked successfully",
-        _id: existingUser._id,
-        fullName: existingUser.fullName,
-        email: existingUser.email,
-        profilePic: existingUser.profilePic || null,
-      });
-    }
-
-    // Check if email already exists (prevent duplicate accounts)
+    // Check if email already exists (prevent account linking)
     const emailExists = await User.findOne({ email: tokenData.email });
     if (emailExists) {
       return res.status(400).json({
         message: "An account with this email already exists. Please sign in with your existing account."
+      });
+    }
+
+    // Check if googleId already exists (prevent duplicate Google accounts)
+    const googleIdExists = await User.findOne({ googleId: tokenData.googleId });
+    if (googleIdExists) {
+      // Existing Google user - just log them in
+      generateToken(googleIdExists._id, res);
+      return res.status(200).json({
+        message: "Login successful",
+        _id: googleIdExists._id,
+        fullName: googleIdExists.fullName,
+        email: googleIdExists.email,
+        profilePic: googleIdExists.profilePic || null,
       });
     }
 
