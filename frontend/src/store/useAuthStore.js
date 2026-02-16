@@ -82,10 +82,11 @@ export const useAuthStore = create((set, get) => ({
 
       get().connectSocket();
     } catch (err) {
-      if (err.response.status === 403) {
+      if (err.response?.status === 403 && err.response?.data?.redirectTo) {
         window.location.href = err.response.data.redirectTo;
+      } else {
+        toast.error(err.response?.data?.message || "Login failed");
       }
-      toast.error(err.response?.data?.message || "Login failed");
     } finally {
       set({ isLoggingIn: false });
     }

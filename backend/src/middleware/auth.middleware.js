@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import User from '../models/user.model.js';
+import { generateTempToken } from '../lib/utils.js';
 
 dotenv.config();
 
@@ -26,6 +27,11 @@ export const protectRoute = async (req, res, next) => {
 
     if (!user) {
       return res.status(404).json({ message: "User not found" })
+    }
+
+    if (!user.privacyPolicyAccepted || !user.termsAndConditionsAccepted) {
+      const tempToken = generateTempToken(user);
+      return res.status(403).json({ message: "Policy not accepted", redirectTo: `/accept-policies?email=${encodeURIComponent(user.email)}&token=${encodeURIComponent(tempToken)}` });
     }
 
     req.user = user

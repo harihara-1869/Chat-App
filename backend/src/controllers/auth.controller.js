@@ -93,15 +93,15 @@ export const login = async (req, res) => {
 
   try {
     const user = await User.findOne({ email });
-    
+
     // Fake hash to prevent timing attacks (user enumeration)
     // Always perform bcrypt comparison even if user not found
     const fakeHash = "$2a$10$abcdefghijklmnopqrstuvwx.yzABCDEFGHIJKLMNOPQRSTUVWXYZ12";
     const passwordToCompare = user ? user.password : fakeHash;
-    
+
     // Perform comparison regardless of user existence
     const isMatch = await bcrypt.compare(password, passwordToCompare);
-    
+
     if (!user) {
       return res.status(400).json({ message: "Invalid email or password." });
     }
@@ -269,26 +269,26 @@ export const updatePassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{10,}$/;
-    
+
     // Validate password complexity
     if (!passwordRegex.test(newPassword)) {
       return res.status(400).json({
         message: "Password must be at least 10 characters long and contain at least one lowercase letter, one uppercase letter, one number, and one special character."
       });
     }
-    
+
     const user = await User.findOne({ resetPasswordToken: token, resetPasswordExpiresAt: { $gt: Date.now() } });
     if (!user) {
       return res.status(400).json({ message: "Invalid or expired token" })
     }
-    
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
     user.password = hashedPassword;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpiresAt = undefined;
     await user.save();
-    
+
     return res.status(200).json({ message: "Password updated successfully. Please log in with your new password." })
   } catch (error) {
     console.log("error in update password:", error);
