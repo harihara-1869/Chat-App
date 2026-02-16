@@ -82,6 +82,9 @@ export const useAuthStore = create((set, get) => ({
 
       get().connectSocket();
     } catch (err) {
+      if (err.response.status === 403) {
+        window.location.href = err.response.data.redirectTo;
+      }
       toast.error(err.response?.data?.message || "Login failed");
     } finally {
       set({ isLoggingIn: false });
@@ -120,8 +123,6 @@ export const useAuthStore = create((set, get) => ({
     cleanupSocketListeners();
     if (get().socket?.connected) get().socket.disconnect();
   },
-
-
 
   // Password Reset
   requestPasswordReset: async (email) => {

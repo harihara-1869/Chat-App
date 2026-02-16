@@ -10,6 +10,8 @@ import {
   EyeOff,
   Loader2,
   AlertTriangle,
+  Check,
+  X,
 } from "lucide-react";
 import AuthImagePattern from "../components/AuthImagePattern";
 import toast from "react-hot-toast";
@@ -29,14 +31,34 @@ export const SignUpPage = () => {
 
   const navigate = useNavigate();
 
+  // Password validation rules
+  const passwordRules = [
+    { id: "length", label: "At least 10 characters", regex: /.{10,}/ },
+    { id: "lowercase", label: "One lowercase letter", regex: /[a-z]/ },
+    { id: "uppercase", label: "One uppercase letter", regex: /[A-Z]/ },
+    { id: "number", label: "One number", regex: /\d/ },
+    { id: "special", label: "One special character (@$!%*?&)", regex: /[@$!%*?&]/ },
+  ];
+
+  // Check which rules are met
+  const getPasswordValidation = (password) => {
+    return passwordRules.map((rule) => ({
+      ...rule,
+      isValid: rule.regex.test(password),
+    }));
+  };
+
+  const passwordValidation = getPasswordValidation(formData.password);
+  const allRulesMet = passwordValidation.every((rule) => rule.isValid);
+
   const validateForm = () => {
     if (!formData.fullName.trim()) return toast.error("Full Name is required");
     if (!formData.email.trim()) return toast.error("Email is required");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
       return toast.error("Invalid email address");
     if (!formData.password.trim()) return toast.error("Password is required");
-    if (formData.password.length < 6)
-      return toast.error("Password must be at least 6 characters long");
+    if (!allRulesMet)
+      return toast.error("Password does not meet all requirements");
     if (!formData.privacyPolicy || !formData.termsAndConditions)
       return toast.error("You must accept the Privacy Policy and Terms and Conditions");
 
@@ -163,6 +185,30 @@ export const SignUpPage = () => {
                   )}
                 </button>
               </div>
+              
+              {/* Password Requirements */}
+              {formData.password && (
+                <div className="mt-3 p-3 bg-base-200 rounded-lg">
+                  <p className="text-sm font-medium mb-2">Password requirements:</p>
+                  <ul className="space-y-1.5">
+                    {passwordValidation.map((rule) => (
+                      <li
+                        key={rule.id}
+                        className={`flex items-center gap-2 text-sm transition-colors ${
+                          rule.isValid ? "text-success" : "text-base-content/60"
+                        }`}
+                      >
+                        {rule.isValid ? (
+                          <Check className="size-4 shrink-0" />
+                        ) : (
+                          <X className="size-4 shrink-0" />
+                        )}
+                        <span>{rule.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             {/* Privacy Policy Checkbox */}

@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const generateToken = (userId, res) => {
-  const token = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+  const token = jwt.sign({ id: userId, type: 'access_token' }, process.env.JWT_SECRET, {
     expiresIn: '3h',
   });
   res.cookie("jwt", token, {
@@ -20,7 +20,7 @@ export const generateToken = (userId, res) => {
 export const generateTempToken = (userData) => {
   const token = jwt.sign(
     {
-      type: 'google_signup_pending',
+      type: 'temp_token',
       googleId: userData.googleId,
       email: userData.email,
       fullName: userData.fullName,
@@ -39,7 +39,7 @@ export const generateTempToken = (userData) => {
 export const verifyTempToken = (token) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (decoded.type !== 'google_signup_pending') {
+    if (decoded.type !== 'temp_token') {
       return null;
     }
     return decoded;

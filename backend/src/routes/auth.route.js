@@ -1,16 +1,16 @@
 import express from 'express';
 import passport from '../lib/passport.js';
-import { 
-  login, 
-  logout, 
-  signup, 
-  googleCallback, 
-  verifyEmail, 
-  resetPassword, 
-  updatePassword,
-  completeGoogleSignup,
-  acceptPolicies,
-  verifyGoogleToken 
+import {
+    login,
+    logout,
+    signup,
+    googleCallback,
+    verifyEmail,
+    resetPassword,
+    updatePassword,
+    completeGoogleSignup,
+    acceptPolicies,
+    verifyGoogleToken
 } from '../controllers/auth.controller.js';
 import { protectRoute } from '../middleware/auth.middleware.js';
 import { authRateLimiter, strictRateLimiter } from '../middleware/rateLimit.middleware.js';

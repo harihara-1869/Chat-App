@@ -21,30 +21,22 @@ passport.use(
                 if (user) {
                     // User exists with this Google ID - check if all policies accepted
                     const needsPolicyAcceptance = !user.privacyPolicyAccepted || !user.termsAndConditionsAccepted;
-                    return done(null, { 
+                    return done(null, {
                         user,
                         isNewUser: false,
-                        needsPrivacyAcceptance: needsPolicyAcceptance 
+                        needsPrivacyAcceptance: needsPolicyAcceptance
                     });
                 }
 
                 // Check if user exists with same email (from local registration)
-                user = await User.findOne({ email: profile.emails[0].value });
+                const existingUser = await User.findOne({ email: profile.emails[0].value });
 
-                if (user) {
-                    // Link Google account to existing user
-                    user.googleId = profile.id;
-                    user.provider = "google";
-                    user.emailVerified = profile.emails[0].verified || true;
-                    if (profile.photos && profile.photos[0]) {
-                        user.profilePic = profile.photos[0].value;
-                    }
-                    await user.save();
-                    const needsPolicyAcceptance = !user.privacyPolicyAccepted || !user.termsAndConditionsAccepted;
-                    return done(null, { 
-                        user,
-                        isNewUser: false,
-                        needsPrivacyAcceptance: needsPolicyAcceptance 
+                if (existingUser) {
+                    // Email already exists - cannot create new account
+                    // Return error flag to redirect with message
+                    return done(null, {
+                        error: "email_exists",
+                        email: profile.emails[0].value
                     });
                 }
 

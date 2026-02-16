@@ -8,6 +8,8 @@ import { env } from "process";
 
 export const signup = async (req, res) => {
   const { fullName, email, password, privacyPolicy, termsAndConditions } = req.body;
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{10,}$/;
+
   try {
     if (!fullName || !email || !password || !privacyPolicy || !termsAndConditions) {
       return res.status(400).json({ message: "All fields are required." });
@@ -17,16 +19,14 @@ export const signup = async (req, res) => {
       return res.status(400).json({ message: "You must accept the privacy policy and terms and conditions." });
     }
 
-    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      // Email is valid
-    } else {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ message: "Invalid email format." });
     }
 
-    if (password.length < 6 || password.length > 20) {
+    if (!passwordRegex.test(password)) {
       return res
         .status(400)
-        .json({ message: "Password must be at least 6 characters long and at most 20 characters long." });
+        .json({ message: "Password must be at least 10 characters long and contain at least one lowercase letter, one uppercase letter, one number, and one special character." });
     }
 
     const user = await User.findOne({ email });
@@ -80,9 +80,20 @@ export const signup = async (req, res) => {
 };
 
 export const login = async (req, res) => {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   const { email, password } = req.body;
+
   try {
     const user = await User.findOne({ email });
+    
+    // Fake hash to prevent timing attacks (user enumeration)
+    // Always perform bcrypt comparison even if user not found
+    const fakeHash = "$2a$10$abcdefghijklmnopqrstuvwx.yzABCDEFGHIJKLMNOPQRSTUVWXYZ12";
+    const passwordToCompare = user ? user.password : fakeHash;
+    
+    // Perform comparison regardless of user existence
+    const isMatch = await bcrypt.compare(password, passwordToCompare);
+    
     if (!user) {
       return res.status(400).json({ message: "Invalid email or password." });
     }
@@ -94,7 +105,15 @@ export const login = async (req, res) => {
       });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    if (!user.termsAndConditionsAccepted || !user.privacyPolicyAccepted) {
+      const tempToken = generateTempToken(user);
+      return res.status(403).json({
+        message: "Please accept the privacy policy and terms to continue.",
+        redirectTo: `/accept-policies?email=${encodeURIComponent(user.email)}&token=${encodeURIComponent(tempToken)}`
+      });
+
+    }
+
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid email or password." });
     }
@@ -185,7 +204,12 @@ export const googleCallback = (req, res) => {
       return res.redirect(`${frontendUrl}/login?error=auth_failed`);
     }
 
-    const { user, pendingUser, isNewUser, needsPrivacyAcceptance } = req.user;
+    const { user, pendingUser, isNewUser, needsPrivacyAcceptance, error, email } = req.user;
+
+    // Handle error case (email already exists)
+    if (error === "email_exists") {
+      return res.redirect(`${frontendUrl}/login?error=email_exists&email=${encodeURIComponent(email)}`);
+    }
 
     if (isNewUser) {
       // Generate temp token for new user to complete signup
@@ -195,7 +219,8 @@ export const googleCallback = (req, res) => {
 
     if (needsPrivacyAcceptance) {
       // Existing user needs to accept policies
-      return res.redirect(`${frontendUrl}/accept-policies?email=${encodeURIComponent(user.email)}`);
+      const tempToken = generateTempToken(user);
+      return res.redirect(`${frontendUrl}/accept-policies?email=${encodeURIComponent(user.email)}&token=${encodeURIComponent(tempToken)}`);
     }
 
     // Existing user with privacy policy accepted - generate JWT and login
@@ -256,7 +281,7 @@ export const completeGoogleSignup = async (req, res) => {
   try {
     const { tempToken, privacyPolicy, termsAndConditions, fullName } = req.body;
 
-    if (!tempToken || !privacyPolicy || !termsAndConditions) {
+    if (!tempToken) {
       return res.status(400).json({
         message: "Temp token and policy acceptance are required."
       });
@@ -303,6 +328,14 @@ export const completeGoogleSignup = async (req, res) => {
       });
     }
 
+    // Check if email already exists (prevent duplicate accounts)
+    const emailExists = await User.findOne({ email: tokenData.email });
+    if (emailExists) {
+      return res.status(400).json({
+        message: "An account with this email already exists. Please sign in with your existing account."
+      });
+    }
+
     // Create new user
     const newUser = new User({
       provider: "google",
@@ -336,11 +369,18 @@ export const completeGoogleSignup = async (req, res) => {
 
 export const acceptPolicies = async (req, res) => {
   try {
-    const { email, privacyPolicy, termsAndConditions } = req.body;
+    const { privacyPolicy, termsAndConditions, token } = req.body;
 
-    if (!email || !privacyPolicy || !termsAndConditions) {
+    if (!privacyPolicy || !termsAndConditions || !token) {
       return res.status(400).json({
-        message: "Email and policy acceptance are required."
+        message: "Token and policy acceptance are required."
+      });
+    }
+
+    const tokenData = verifyTempToken(token);
+    if (!tokenData) {
+      return res.status(400).json({
+        message: "Invalid or expired token. Please try again."
       });
     }
 
@@ -350,7 +390,7 @@ export const acceptPolicies = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: tokenData.email });
 
     if (!user) {
       return res.status(404).json({ message: "User not found." });

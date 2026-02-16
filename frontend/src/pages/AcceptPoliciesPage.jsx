@@ -3,8 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
 import { PrivacyPolicyContent } from "../components/PrivacyPolicyContent";
 import { TermsAndConditionsContent } from "../components/TermsAndConditionsContent";
-import { 
-    Loader2, 
+import {
+    Loader2,
     Shield,
     ArrowLeft,
     CheckCircle,
@@ -18,9 +18,10 @@ export const AcceptPoliciesPage = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const email = searchParams.get("email");
-    
+    const token = searchParams.get("token");
+
     const { acceptPolicies, isLoggingIn } = useAuthStore();
-    
+
     const [policiesAccepted, setPoliciesAccepted] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [activeTab, setActiveTab] = useState("privacy");
@@ -40,7 +41,7 @@ export const AcceptPoliciesPage = () => {
 
         setIsLoading(true);
         const result = await acceptPolicies({
-            email,
+            token,
             privacyPolicy: true,
             termsAndConditions: true,
         });
@@ -76,7 +77,7 @@ export const AcceptPoliciesPage = () => {
                         <ArrowLeft className="w-4 h-4" />
                         Back to Login
                     </button>
-                    
+
                     <div className="card bg-primary/10 border border-primary/20">
                         <div className="card-body">
                             <div className="flex items-start gap-4">
@@ -86,8 +87,8 @@ export const AcceptPoliciesPage = () => {
                                 <div>
                                     <h1 className="text-2xl font-bold mb-2">Policy Update Required</h1>
                                     <p className="text-base-content/80">
-                                        Before you can continue using your account, please review and accept our 
-                                        updated Privacy Policy and Terms and Conditions. This is required to ensure 
+                                        Before you can continue using your account, please review and accept our
+                                        updated Privacy Policy and Terms and Conditions. This is required to ensure
                                         you understand how we handle your data and the terms of service.
                                     </p>
                                     <p className="text-base-content/60 text-sm mt-2">
@@ -130,7 +131,7 @@ export const AcceptPoliciesPage = () => {
                 <div className="card bg-base-100 shadow-lg border-2 border-primary/20 sticky bottom-4">
                     <div className="card-body">
                         <h2 className="text-xl font-bold mb-4">Accept Policies</h2>
-                        
+
                         {/* Checkbox */}
                         <div className="form-control mb-6">
                             <label className="label cursor-pointer justify-start gap-4">
@@ -182,7 +183,7 @@ export const AcceptPoliciesPage = () => {
                                     </>
                                 )}
                             </button>
-                            
+
                             <button
                                 onClick={handleDecline}
                                 disabled={isLoggingIn || isLoading}
@@ -194,7 +195,7 @@ export const AcceptPoliciesPage = () => {
                         </div>
 
                         <p className="text-base-content/60 text-sm mt-4 text-center">
-                            By clicking "Accept and Continue", you acknowledge that you have read, understood, 
+                            By clicking "Accept and Continue", you acknowledge that you have read, understood,
                             and agree to be bound by both our Privacy Policy and Terms and Conditions.
                         </p>
                     </div>
