@@ -170,8 +170,8 @@ describe('ResetPassword Page', () => {
             renderResetPasswordPage('/reset-password?token=test-token');
 
             const passwordInputs = screen.getAllByPlaceholderText('••••••••');
-            fireEvent.change(passwordInputs[0], { target: { value: 'password123' } });
-            fireEvent.change(passwordInputs[1], { target: { value: 'different456' } });
+            fireEvent.change(passwordInputs[0], { target: { value: 'NewPass123!' } });
+            fireEvent.change(passwordInputs[1], { target: { value: 'Different456!' } });
 
             const submitButton = screen.getByRole('button', { name: /reset password/i });
             fireEvent.click(submitButton);
@@ -181,18 +181,18 @@ describe('ResetPassword Page', () => {
             });
         });
 
-        it('should show error when password is too short', async () => {
+        it('should show error when password does not meet complexity requirements', async () => {
             renderResetPasswordPage('/reset-password?token=test-token');
 
             const passwordInputs = screen.getAllByPlaceholderText('••••••••');
-            fireEvent.change(passwordInputs[0], { target: { value: '123' } });
-            fireEvent.change(passwordInputs[1], { target: { value: '123' } });
+            fireEvent.change(passwordInputs[0], { target: { value: 'weak' } });
+            fireEvent.change(passwordInputs[1], { target: { value: 'weak' } });
 
             const submitButton = screen.getByRole('button', { name: /reset password/i });
             fireEvent.click(submitButton);
 
             await waitFor(() => {
-                expect(screen.getByText(/at least 6 characters/i)).toBeInTheDocument();
+                expect(screen.getByText(/does not meet all requirements/i)).toBeInTheDocument();
             });
         });
 
@@ -201,14 +201,14 @@ describe('ResetPassword Page', () => {
             renderResetPasswordPage('/reset-password?token=my-reset-token');
 
             const passwordInputs = screen.getAllByPlaceholderText('••••••••');
-            fireEvent.change(passwordInputs[0], { target: { value: 'newpassword123' } });
-            fireEvent.change(passwordInputs[1], { target: { value: 'newpassword123' } });
+            fireEvent.change(passwordInputs[0], { target: { value: 'NewPass123!' } });
+            fireEvent.change(passwordInputs[1], { target: { value: 'NewPass123!' } });
 
             const submitButton = screen.getByRole('button', { name: /reset password/i });
             fireEvent.click(submitButton);
 
             await waitFor(() => {
-                expect(mockUpdatePassword).toHaveBeenCalledWith('my-reset-token', 'newpassword123');
+                expect(mockUpdatePassword).toHaveBeenCalledWith('my-reset-token', 'NewPass123!');
             });
         });
 
@@ -217,8 +217,8 @@ describe('ResetPassword Page', () => {
             renderResetPasswordPage('/reset-password?token=test-token');
 
             const passwordInputs = screen.getAllByPlaceholderText('••••••••');
-            fireEvent.change(passwordInputs[0], { target: { value: 'newpassword123' } });
-            fireEvent.change(passwordInputs[1], { target: { value: 'newpassword123' } });
+            fireEvent.change(passwordInputs[0], { target: { value: 'NewPass123!' } });
+            fireEvent.change(passwordInputs[1], { target: { value: 'NewPass123!' } });
 
             const submitButton = screen.getByRole('button', { name: /reset password/i });
             fireEvent.click(submitButton);
@@ -235,8 +235,8 @@ describe('ResetPassword Page', () => {
             renderResetPasswordPage('/reset-password?token=invalid-token');
 
             const passwordInputs = screen.getAllByPlaceholderText('••••••••');
-            fireEvent.change(passwordInputs[0], { target: { value: 'newpassword123' } });
-            fireEvent.change(passwordInputs[1], { target: { value: 'newpassword123' } });
+            fireEvent.change(passwordInputs[0], { target: { value: 'NewPass123!' } });
+            fireEvent.change(passwordInputs[1], { target: { value: 'NewPass123!' } });
 
             const submitButton = screen.getByRole('button', { name: /reset password/i });
             fireEvent.click(submitButton);

@@ -48,14 +48,14 @@ describe('Auth Middleware - Token Validation Logic', () => {
 
     describe('token decoding', () => {
         it('should verify decoded token has user id', () => {
-            const decodedToken = { id: 'user-123' };
+            const decodedToken = { id: 'user-123', type: 'access_token' };
             const hasUserId = decodedToken && decodedToken.id;
 
             expect(hasUserId).toBeTruthy();
         });
 
         it('should reject token without id', () => {
-            const decodedToken = {};
+            const decodedToken = { type: 'access_token' };
             const hasUserId = decodedToken && decodedToken.id;
 
             expect(hasUserId).toBeFalsy();
@@ -66,6 +66,20 @@ describe('Auth Middleware - Token Validation Logic', () => {
             const hasUserId = decodedToken && decodedToken.id;
 
             expect(hasUserId).toBeFalsy();
+        });
+
+        it('should verify token type is access_token', () => {
+            const decodedToken = { id: 'user-123', type: 'access_token' };
+            const isValidType = decodedToken.type === 'access_token';
+
+            expect(isValidType).toBe(true);
+        });
+
+        it('should reject token with wrong type', () => {
+            const decodedToken = { id: 'user-123', type: 'temp_token' };
+            const isValidType = decodedToken.type === 'access_token';
+
+            expect(isValidType).toBe(false);
         });
     });
 
@@ -101,7 +115,13 @@ describe('Auth Middleware - Token Validation Logic', () => {
     describe('middleware behavior', () => {
         it('should attach user to request on success', () => {
             const req = createMockReq();
-            const user = { _id: 'user-123', fullName: 'Test User', email: 'test@example.com' };
+            const user = { 
+                _id: 'user-123', 
+                fullName: 'Test User', 
+                email: 'test@example.com',
+                termsAndConditionsAccepted: true,
+                privacyPolicyAccepted: true
+            };
 
             // Simulate middleware attaching user
             req.user = user;
@@ -122,6 +142,41 @@ describe('Auth Middleware - Token Validation Logic', () => {
             mockRes.status(401).json({ message: 'Unauthorized' });
 
             expect(mockNext).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('terms enforcement in protectRoute', () => {
+        it('should check user has accepted terms', () => {
+            const user = {
+                _id: 'user-123',
+                termsAndConditionsAccepted: true,
+                privacyPolicyAccepted: true
+            };
+
+            const hasAcceptedTerms = user.termsAndConditionsAccepted && user.privacyPolicyAccepted;
+            expect(hasAcceptedTerms).toBe(true);
+        });
+
+        it('should reject user who has not accepted terms', () => {
+            const user = {
+                _id: 'user-123',
+                termsAndConditionsAccepted: false,
+                privacyPolicyAccepted: true
+            };
+
+            const hasAcceptedTerms = user.termsAndConditionsAccepted && user.privacyPolicyAccepted;
+            expect(hasAcceptedTerms).toBe(false);
+        });
+
+        it('should reject user who has not accepted privacy policy', () => {
+            const user = {
+                _id: 'user-123',
+                termsAndConditionsAccepted: true,
+                privacyPolicyAccepted: false
+            };
+
+            const hasAcceptedTerms = user.termsAndConditionsAccepted && user.privacyPolicyAccepted;
+            expect(hasAcceptedTerms).toBe(false);
         });
     });
 });

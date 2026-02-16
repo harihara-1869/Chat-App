@@ -19,36 +19,41 @@ passport.use(
                 let user = await User.findOne({ googleId: profile.id });
 
                 if (user) {
-                    return done(null, user);
+                    // User exists with this Google ID - check if all policies accepted
+                    const needsPolicyAcceptance = !user.privacyPolicyAccepted || !user.termsAndConditionsAccepted;
+                    return done(null, {
+                        user,
+                        isNewUser: false,
+                        needsPrivacyAcceptance: needsPolicyAcceptance
+                    });
                 }
 
                 // Check if user exists with same email (from local registration)
-                user = await User.findOne({ email: profile.emails[0].value });
+                const existingUser = await User.findOne({ email: profile.emails[0].value });
 
-                if (user) {
-                    // Link Google account to existing user
-                    user.googleId = profile.id;
-                    user.provider = "google";
-                    user.emailVerified = profile.emails[0].verified || true;
-                    if (profile.photos && profile.photos[0]) {
-                        user.profilePic = profile.photos[0].value;
-                    }
-                    await user.save();
-                    return done(null, user);
+                if (existingUser) {
+                    // Email already exists - cannot create new account
+                    // Return error flag to redirect with message
+                    return done(null, {
+                        error: "email_exists",
+                        email: profile.emails[0].value
+                    });
                 }
 
-                // Create new user
-                const newUser = new User({
-                    provider: "google",
+                // New user - return pending data for privacy policy acceptance
+                const pendingUser = {
                     googleId: profile.id,
                     email: profile.emails[0].value,
                     emailVerified: profile.emails[0].verified || true,
                     fullName: profile.displayName,
                     profilePic: profile.photos?.[0]?.value || "",
-                });
+                };
 
-                await newUser.save();
-                return done(null, newUser);
+                return done(null, {
+                    pendingUser,
+                    isNewUser: true,
+                    needsPrivacyAcceptance: true
+                });
             } catch (error) {
                 return done(error, null);
             }

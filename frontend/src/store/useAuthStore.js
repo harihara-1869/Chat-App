@@ -82,7 +82,11 @@ export const useAuthStore = create((set, get) => ({
 
       get().connectSocket();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Login failed");
+      if (err.response?.status === 403 && err.response?.data?.redirectTo) {
+        window.location.href = err.response.data.redirectTo;
+      } else {
+        toast.error(err.response?.data?.message || "Login failed");
+      }
     } finally {
       set({ isLoggingIn: false });
     }
@@ -121,8 +125,6 @@ export const useAuthStore = create((set, get) => ({
     if (get().socket?.connected) get().socket.disconnect();
   },
 
-
-
   // Password Reset
   requestPasswordReset: async (email) => {
     set({ isResettingPassword: true });
@@ -155,5 +157,50 @@ export const useAuthStore = create((set, get) => ({
   // Google OAuth - redirect to backend Google auth endpoint
   googleLogin: () => {
     window.location.href = `${BASE_URL}/auth/google`;
+  },
+
+  // Verify Google OAuth temp token and get user data
+  verifyGoogleToken: async (token) => {
+    try {
+      const res = await axiosInstance.get(`/auth/google/verify-token?token=${token}`);
+      return { success: true, data: res.data };
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Invalid or expired token");
+      return { success: false, error: error.response?.data?.message };
+    }
+  },
+
+  // Complete Google OAuth signup with privacy policy acceptance
+  completeGoogleSignup: async (data) => {
+    set({ isSigningUp: true });
+    try {
+      const res = await axiosInstance.post("/auth/google/complete-signup", data);
+      set({ authUser: res.data });
+      toast.success("Account created successfully!");
+      get().connectSocket();
+      return { success: true };
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to complete signup");
+      return { success: false, error: error.response?.data?.message };
+    } finally {
+      set({ isSigningUp: false });
+    }
+  },
+
+  // Accept policies for existing Google OAuth users
+  acceptPolicies: async (data) => {
+    set({ isLoggingIn: true });
+    try {
+      const res = await axiosInstance.post("/auth/google/accept-policies", data);
+      set({ authUser: res.data });
+      toast.success("Policies accepted successfully!");
+      get().connectSocket();
+      return { success: true };
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to accept policies");
+      return { success: false, error: error.response?.data?.message };
+    } finally {
+      set({ isLoggingIn: false });
+    }
   }
 }));

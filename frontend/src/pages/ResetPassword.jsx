@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
-import { Loader2, Mail, Lock, KeyRound, BadgeCheck, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { Loader2, Mail, Lock, KeyRound, BadgeCheck, AlertCircle, Eye, EyeOff, Check, X } from "lucide-react";
 import AuthImagePattern from "../components/AuthImagePattern";
 
 export const ResetPassword = () => {
@@ -24,6 +24,27 @@ export const ResetPassword = () => {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+    // Password validation rules
+    const passwordRules = [
+        { id: "length", label: "At least 10 characters", regex: /.{10,}/ },
+        { id: "lowercase", label: "One lowercase letter", regex: /[a-z]/ },
+        { id: "uppercase", label: "One uppercase letter", regex: /[A-Z]/ },
+        { id: "number", label: "One number", regex: /\d/ },
+        { id: "special", label: "One special character (@$!%*?&)", regex: /[@$!%*?&]/ },
+    ];
+
+    // Check which rules are met
+    const getPasswordValidation = (password) => {
+        return passwordRules.map((rule) => ({
+            ...rule,
+            isValid: rule.regex.test(password),
+        }));
+    };
+
+    const passwordValidation = getPasswordValidation(newPassword);
+    const allRulesMet = passwordValidation.every((rule) => rule.isValid);
+    const passwordsMatch = newPassword && confirmPassword && newPassword === confirmPassword;
 
     useEffect(() => {
         if (token) {
@@ -56,9 +77,9 @@ export const ResetPassword = () => {
             return;
         }
 
-        if (newPassword.length < 6) {
+        if (!allRulesMet) {
             setStatus("error");
-            setErrorMessage("Password must be at least 6 characters");
+            setErrorMessage("Password does not meet all requirements");
             return;
         }
 
@@ -199,6 +220,30 @@ export const ResetPassword = () => {
                                         )}
                                     </button>
                                 </div>
+                                
+                                {/* Password Requirements */}
+                                {newPassword && (
+                                    <div className="mt-3 p-3 bg-base-200 rounded-lg">
+                                        <p className="text-sm font-medium mb-2">Password requirements:</p>
+                                        <ul className="space-y-1.5">
+                                            {passwordValidation.map((rule) => (
+                                                <li
+                                                    key={rule.id}
+                                                    className={`flex items-center gap-2 text-sm transition-colors ${
+                                                        rule.isValid ? "text-success" : "text-base-content/60"
+                                                    }`}
+                                                >
+                                                    {rule.isValid ? (
+                                                        <Check className="h-4 w-4 shrink-0" />
+                                                    ) : (
+                                                        <X className="h-4 w-4 shrink-0" />
+                                                    )}
+                                                    <span>{rule.label}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="form-control">

@@ -1,8 +1,9 @@
 import React from 'react'
 import { useAuthStore } from '../store/useAuthStore'
 import AuthImagePattern from '../components/AuthImagePattern'
-import { Link } from 'react-router-dom'
-import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquare } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquare, AlertCircle } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 export const LoginPage = () => {
   const [showPassword, setShowPassword] = React.useState(false);
@@ -10,7 +11,24 @@ export const LoginPage = () => {
     email: '',
     password: ''
   });
+  const [searchParams] = useSearchParams();
   const { login, isLoggingIn, googleLogin } = useAuthStore();
+
+  // Handle OAuth error messages from URL
+  React.useEffect(() => {
+    const error = searchParams.get('error');
+    const email = searchParams.get('email');
+    
+    if (error === 'email_exists') {
+      toast.error(`An account with ${email || 'this email'} already exists. Please sign in with your existing account.`);
+    } else if (error === 'auth_failed') {
+      toast.error('Authentication failed. Please try again.');
+    } else if (error === 'oauth_failed') {
+      toast.error('Google authentication failed. Please try again.');
+    } else if (error === 'server_error') {
+      toast.error('Server error. Please try again later.');
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
