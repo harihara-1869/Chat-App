@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { PrivacyPolicyContent } from "../components/PrivacyPolicyContent";
+import { TermsAndConditionsContent } from "../components/TermsAndConditionsContent";
 
-export const PrivacyPolicyPage = () => {
+export const TermsAndConditionsPage = () => {
     return (
         <div className="min-h-screen bg-base-200 pt-20">
             <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -17,8 +17,8 @@ export const PrivacyPolicyPage = () => {
                     </Link>
                 </div>
 
-                {/* Privacy Policy Content */}
-                <PrivacyPolicyContent showContact={true} />
+                {/* Terms and Conditions Content */}
+                <TermsAndConditionsContent showContact={true} />
 
                 {/* Footer */}
                 <div className="text-center text-base-content/50 text-sm py-8">

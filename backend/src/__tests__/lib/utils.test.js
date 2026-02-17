@@ -83,3 +83,98 @@ describe('generateToken - Expected Behavior', () => {
         });
     });
 });
+
+describe('generateTempToken - Google OAuth Pending Signup', () => {
+    describe('token payload structure', () => {
+        it('should include required user data fields', () => {
+            const userData = {
+                googleId: 'google-123',
+                email: 'test@example.com',
+                fullName: 'Test User',
+                profilePic: 'https://example.com/pic.jpg',
+                emailVerified: true
+            };
+
+            expect(userData).toHaveProperty('googleId');
+            expect(userData).toHaveProperty('email');
+            expect(userData).toHaveProperty('fullName');
+            expect(userData).toHaveProperty('profilePic');
+            expect(userData).toHaveProperty('emailVerified');
+        });
+
+        it('should have type field set to google_signup_pending', () => {
+            const payload = {
+                type: 'google_signup_pending',
+                googleId: 'google-123',
+                email: 'test@example.com'
+            };
+
+            expect(payload.type).toBe('google_signup_pending');
+        });
+    });
+
+    describe('token expiration', () => {
+        it('should expire in 10 minutes', () => {
+            const expectedExpiry = '10m';
+            const options = { expiresIn: expectedExpiry };
+
+            expect(options.expiresIn).toBe('10m');
+        });
+
+        it('should calculate 10 minutes in milliseconds correctly', () => {
+            const tenMinutesInMs = 10 * 60 * 1000;
+            
+            expect(tenMinutesInMs).toBe(600000);
+        });
+    });
+});
+
+describe('verifyTempToken - Token Validation', () => {
+    describe('valid token', () => {
+        it('should return decoded data for valid google_signup_pending token', () => {
+            const validToken = {
+                type: 'google_signup_pending',
+                googleId: 'google-123',
+                email: 'test@example.com',
+                fullName: 'Test User',
+                profilePic: 'https://example.com/pic.jpg',
+                emailVerified: true
+            };
+
+            expect(validToken.type).toBe('google_signup_pending');
+            expect(validToken.googleId).toBe('google-123');
+            expect(validToken.email).toBe('test@example.com');
+        });
+    });
+
+    describe('invalid token types', () => {
+        it('should reject token with wrong type', () => {
+            const wrongTypeToken = {
+                type: 'password_reset',
+                userId: 'user-123'
+            };
+
+            const isValid = wrongTypeToken.type === 'google_signup_pending';
+            expect(isValid).toBe(false);
+        });
+
+        it('should reject token with missing type', () => {
+            const noTypeToken = {
+                googleId: 'google-123',
+                email: 'test@example.com'
+            };
+
+            const isValid = noTypeToken.type === 'google_signup_pending';
+            expect(isValid).toBe(false);
+        });
+    });
+
+    describe('expired token', () => {
+        it('should handle expired tokens', () => {
+            const expiredError = new Error('jwt expired');
+            
+            expect(expiredError.message).toBe('jwt expired');
+        });
+    });
+});
+

@@ -31,10 +31,18 @@ io.use(async (socket, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.type !== "access_token") {
+      return next(new Error("Token is not valid."));
+    }
+
     const user = await User.findById(decoded.id).select("-password");
 
     if (!user) {
       return next(new Error("Authentication error: User not found"));
+    }
+
+    if (!user.privacyPolicyAccepted || !user.termsAndConditionsAccepted) {
+      return next(new Error("Policy not accepted"));
     }
 
     socket.userId = user._id.toString(); // Attach userId to socket

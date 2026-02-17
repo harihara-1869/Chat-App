@@ -20,6 +20,7 @@ A full-stack real-time chat application built with the MERN stack (MongoDB, Expr
 - 🟢 **Online Status:** Real-time online/offline user status updates.
 - 🖼️ **Image Sharing:** Upload and share images in chat via Cloudinary.
 - 🎨 **Theming:** Multiple color themes support (coffee, dark, etc.).
+- 📜 **Policy Enforcement:** Mandatory acceptance of Privacy Policy and Terms & Conditions.
 - 🛡️ **Enhanced Security:** Rate limiting, regex protection, and payload limits.
 - 📱 **Responsive Design:** Mobile-friendly interface.
 
@@ -40,6 +41,9 @@ A full-stack real-time chat application built with the MERN stack (MongoDB, Expr
 | `POST` | `/update-password` | Update password | **Yes** |
 | `GET` | `/google` | Initiate Google OAuth login | No |
 | `GET` | `/google/callback` | Handle Google OAuth callback | No |
+| `GET` | `/google/verify-token` | Verify Google token | No |
+| `POST` | `/google/complete-signup` | Complete (Google) OAuth signup | No |
+| `POST` | `/google/accept-policies` | Accept policies (Google/Existing) | No |
 
 #### User (`/api/user`)
 | Method | Endpoint | Description | Protected |

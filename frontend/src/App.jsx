@@ -8,7 +8,9 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { FriendsPage } from "./pages/FriendsPage";
 import { VerifyEmailPage } from "./pages/VerifyEmailPage";
 import { PrivacyPolicyPage } from "./pages/PrivacyPolicyPage";
-import { AcceptPrivacyPolicyPage } from "./pages/AcceptPrivacyPolicyPage";
+import { TermsAndConditionsPage } from "./pages/TermsAndConditionsPage";
+import { CompleteGoogleSignupPage } from "./pages/CompleteGoogleSignupPage";
+import { AcceptPoliciesPage } from "./pages/AcceptPoliciesPage";
 import { ResetPassword } from "./pages/ResetPassword";
 import { Navbar } from "./components/Navbar";
 import { useAuthStore } from "./store/useAuthStore";
@@ -63,7 +65,9 @@ function App() {
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-        <Route path="/accept-privacy-policy" element={authUser ? <AcceptPrivacyPolicyPage /> : <Navigate to="/login" />} />
+        <Route path="/terms-and-conditions" element={<TermsAndConditionsPage />} />
+        <Route path="/complete-google-signup" element={<CompleteGoogleSignupPage />} />
+        <Route path="/accept-policies" element={<AcceptPoliciesPage />} />
       </Routes>
 
       <Toaster />
