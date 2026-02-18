@@ -55,10 +55,6 @@ const userSchema = new mongoose.Schema(
       default: false,
       required: true,
     },
-    privacyPolicyAcceptedAt: {
-      type: Date,
-      default: null,
-    },
     termsAndConditionsAccepted: {
       type: Boolean,
       default: false,
