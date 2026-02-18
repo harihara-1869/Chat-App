@@ -64,6 +64,9 @@ io.on("connection", (socket) => {
   console.log("A user connected", socket.id, "userId:", socket.userId);
 
   const userId = socket.userId; // Use authenticated userId, not query param
+  // Store deviceId from handshake for future multi-device support
+  socket.deviceId = socket.handshake.auth?.deviceId || 1;
+
   if (userId) userSocketMap[userId] = socket.id
 
   //io.emit() is used to send events to all connected clients

@@ -1,6 +1,6 @@
 /**
  * Message Controller Unit Tests
- * Tests for getMessages, sendMessage
+ * Tests for getMessages, sendMessage (Signal Protocol encrypted format)
  * 
  * These tests use a simplified approach focusing on testing the
  * expected behavior patterns and response formats.
@@ -47,37 +47,126 @@ describe('Message Controller - Query Logic', () => {
         });
     });
 
-    describe('sendMessage', () => {
-        it('should construct message with correct fields', () => {
+    describe('sendMessage - Encrypted Format', () => {
+        it('should construct message with Signal Protocol fields', () => {
             const senderId = 'user-123';
             const receiverId = 'user-456';
-            const text = 'Hello, world!';
-            const imageUrl = 'https://cloudinary.com/image.jpg';
 
             const message = {
                 senderId,
                 receiverId,
-                text,
-                image: imageUrl
+                type: 'prekey',
+                ciphertext: 'base64-ciphertext-blob',
+                senderDeviceId: 1,
+                recipientDeviceId: 1,
+                registrationId: 5678,
+                preKeyBundle: {
+                    identityKey: 'base64-identity-key',
+                    ephemeralKey: 'base64-ephemeral-key',
+                    signedPreKeyId: 1,
+                    oneTimePreKeyId: 42,
+                },
             };
 
             expect(message.senderId).toBe(senderId);
             expect(message.receiverId).toBe(receiverId);
-            expect(message.text).toBe(text);
-            expect(message.image).toBe(imageUrl);
+            expect(message.type).toBe('prekey');
+            expect(message.ciphertext).toBe('base64-ciphertext-blob');
+            expect(message.senderDeviceId).toBe(1);
+            expect(message.registrationId).toBe(5678);
         });
 
-        it('should handle message without image', () => {
+        it('should handle regular (non-prekey) encrypted message', () => {
             const message = {
                 senderId: 'user-123',
                 receiverId: 'user-456',
-                text: 'Text only message',
-                image: undefined
+                type: 'message',
+                ciphertext: 'base64-ciphertext',
+                senderDeviceId: 1,
+                recipientDeviceId: 1,
+                ratchetHeader: {
+                    ratchetPublicKey: 'base64-ratchet-key',
+                    messageNumber: 5,
+                    previousChainLength: 3,
+                },
             };
 
-            expect(message.text).toBe('Text only message');
-            expect(message.image).toBeUndefined();
+            expect(message.type).toBe('message');
+            expect(message.ratchetHeader).toBeDefined();
+            expect(message.ratchetHeader.messageNumber).toBe(5);
         });
+
+        it('should require ciphertext for encrypted messages', () => {
+            const body = { type: 'message' };
+            const hasCiphertext = !!body.ciphertext;
+
+            expect(hasCiphertext).toBe(false);
+        });
+
+        it('should validate message type', () => {
+            const validTypes = ['prekey', 'message'];
+
+            expect(validTypes).toContain('prekey');
+            expect(validTypes).toContain('message');
+            expect(validTypes).not.toContain('plaintext');
+            expect(validTypes).not.toContain('text');
+        });
+
+        it('should default senderDeviceId to 1', () => {
+            const body = { type: 'message', ciphertext: 'blob' };
+            const senderDeviceId = body.senderDeviceId || 1;
+
+            expect(senderDeviceId).toBe(1);
+        });
+    });
+});
+
+describe('Message Controller - Input Validation', () => {
+    it('should require type field', () => {
+        const body = { ciphertext: 'blob' };
+        const isValid = !!body.type && !!body.ciphertext;
+
+        expect(isValid).toBe(false);
+    });
+
+    it('should require ciphertext field', () => {
+        const body = { type: 'message' };
+        const isValid = !!body.type && !!body.ciphertext;
+
+        expect(isValid).toBe(false);
+    });
+
+    it('should accept valid encrypted message body', () => {
+        const body = {
+            type: 'message',
+            ciphertext: 'base64-encrypted-data',
+            senderDeviceId: 1,
+        };
+        const isValid = !!body.type && !!body.ciphertext;
+
+        expect(isValid).toBe(true);
+    });
+
+    it('should require preKeyBundle for prekey messages', () => {
+        const body = { type: 'prekey', ciphertext: 'blob' };
+        const isValid = body.type === 'prekey' ? !!body.preKeyBundle : true;
+
+        expect(isValid).toBe(false);
+    });
+
+    it('should accept prekey message with bundle', () => {
+        const body = {
+            type: 'prekey',
+            ciphertext: 'blob',
+            preKeyBundle: {
+                identityKey: 'key',
+                ephemeralKey: 'eph',
+                signedPreKeyId: 1,
+            },
+        };
+        const isValid = body.type === 'prekey' ? !!body.preKeyBundle : true;
+
+        expect(isValid).toBe(true);
     });
 });
 
@@ -88,18 +177,35 @@ describe('Message Controller - Response Format', () => {
         mockRes = createMockRes();
     });
 
-    it('should return 201 for created message', () => {
+    it('should return 201 for created encrypted message', () => {
         const newMessage = {
             _id: 'msg-123',
             senderId: 'user-123',
             receiverId: 'user-456',
-            text: 'Hello!'
+            type: 'message',
+            ciphertext: 'base64-encrypted-data',
+            senderDeviceId: 1,
+            recipientDeviceId: 1,
         };
 
         mockRes.status(201).json(newMessage);
 
         expect(mockRes.status).toHaveBeenCalledWith(201);
-        expect(mockRes.json).toHaveBeenCalledWith(newMessage);
+        expect(mockRes.json).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'message', ciphertext: 'base64-encrypted-data' })
+        );
+    });
+
+    it('should return 400 for missing type or ciphertext', () => {
+        mockRes.status(400).json({ message: 'type and ciphertext are required for encrypted messages' });
+
+        expect(mockRes.status).toHaveBeenCalledWith(400);
+    });
+
+    it('should return 400 for invalid message type', () => {
+        mockRes.status(400).json({ message: 'Invalid message type. Must be "prekey" or "message"' });
+
+        expect(mockRes.status).toHaveBeenCalledWith(400);
     });
 
     it('should return 500 for internal errors', () => {
@@ -126,19 +232,44 @@ describe('Message Controller - Socket Notification Logic', () => {
         expect(getReceiverSocketId('user-999')).toBeUndefined();
     });
 
-    it('should emit newMessage event with message data', () => {
+    it('should emit newMessage event with encrypted message data', () => {
         const mockIo = {
             to: jest.fn().mockReturnThis(),
             emit: jest.fn()
         };
 
         const receiverSocketId = 'socket-abc';
-        const message = { _id: 'msg-123', text: 'Hello!' };
+        const message = {
+            _id: 'msg-123',
+            type: 'message',
+            ciphertext: 'base64-encrypted',
+            senderDeviceId: 1,
+        };
 
-        // Simulate the emission pattern
         mockIo.to(receiverSocketId).emit('newMessage', message);
 
         expect(mockIo.to).toHaveBeenCalledWith('socket-abc');
-        expect(mockIo.emit).toHaveBeenCalledWith('newMessage', message);
+        expect(mockIo.emit).toHaveBeenCalledWith('newMessage',
+            expect.objectContaining({ type: 'message', ciphertext: 'base64-encrypted' })
+        );
+    });
+});
+
+describe('Message Controller - Conversation Update Logic', () => {
+    it('should update conversation lastMessage after sending', () => {
+        const messageId = 'msg-123';
+        const senderId = 'user-123';
+        const receiverId = 'user-456';
+
+        const updateQuery = {
+            participants: { $all: [senderId, receiverId] },
+        };
+        const updateFields = {
+            lastMessage: messageId,
+        };
+
+        expect(updateQuery.participants.$all).toContain(senderId);
+        expect(updateQuery.participants.$all).toContain(receiverId);
+        expect(updateFields.lastMessage).toBe(messageId);
     });
 });

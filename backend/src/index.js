@@ -13,6 +13,8 @@ import { generalRateLimiter } from './middleware/rateLimit.middleware.js';
 import { requirePrivacyPolicy } from './middleware/requirePrivacyPolicy.js';
 import userRoutes from './routes/user.route.js';
 import privacyRoutes from './routes/privacy.route.js';
+import keyRoutes from './routes/keys.route.js';
+import deviceRoutes from './routes/device.route.js';
 dotenv.config();
 
 
@@ -41,16 +43,15 @@ app.use((req, res, next) => {
 // Initialize Passport (no session needed for JWT-based auth)
 app.use(passport.initialize());
 
-// Trust proxy for accurate IP detection behind reverse proxies (nginx, cloudflare, etc.)
 app.set('trust proxy', 1);
-
-// Apply general rate limiting to all API routes
 app.use("/api", generalRateLimiter);
 
 // Enforce privacy policy acceptance on all /api routes (after rate limiting)
 app.use("/api", requirePrivacyPolicy);
 
 app.use("/api/auth", authRoutes)
+app.use("/api/devices", deviceRoutes)
+app.use("/api/keys", keyRoutes)
 app.use("/api/privacy-policy", privacyRoutes)
 app.use("/api/message", messageRoutes)
 app.use("/api/friend", friendRoutes)

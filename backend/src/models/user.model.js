@@ -36,20 +36,20 @@ const userSchema = new mongoose.Schema(
       },
       minLength: 6,
     },
+    // Identity key and device info now in Device model (see device.model.js)
     friends: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
       },
     ],
+
     verificationToken: String,
     verificationTokenExpiresAt: Date,
-    resetPasswordToken: {
-      type: String,
-    },
-    resetPasswordExpiresAt: {
-      type: Date,
-    },
+
+    resetPasswordToken: String,
+    resetPasswordExpiresAt: Date,
+
     privacyPolicyAccepted: {
       type: Boolean,
       default: false,
@@ -75,12 +75,9 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Create sparse index for googleId (allows multiple nulls but unique non-null values)
+// Indexes
 userSchema.index({ googleId: 1 }, { sparse: true, unique: true });
-userSchema.index(
-  { accountExpiresAt: 1 },
-  { expireAfterSeconds: 0 }
-);
+userSchema.index({ accountExpiresAt: 1 }, { expireAfterSeconds: 0 });
 
 const User = mongoose.model("User", userSchema);
 export default User;
