@@ -38,7 +38,7 @@ export const useAuthStore = create((set, get) => ({
   },
 
   acceptPrivacyPolicy: async () => {
-    const res = await axiosInstance.post("/privacy-policy/accept", { accepted: true });
+    const res = await axiosInstance.post("/user/accept-policies", { accepted: true });
     // Re-run checkAuth to get the full user object and connect socket
     set({ requiresPrivacyPolicy: false });
     await get().checkAuth();

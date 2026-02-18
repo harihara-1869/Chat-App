@@ -1,5 +1,6 @@
 import User from "../models/user.model.js";
 import cloudinary from "../lib/cloudinary.js";
+import { verifyTempToken, generateToken } from "../lib/utils.js"
 
 
 export const getUserInfo = async (req, res) => {
@@ -45,3 +46,54 @@ export async function getFriends(req, res) {
         return res.status(500).json({ error: "Server error" });
     }
 }
+
+export const acceptPolicies = async (req, res) => {
+    try {
+        const { privacyPolicy, termsAndConditions, token } = req.body;
+
+        if (!privacyPolicy || !termsAndConditions || !token) {
+            return res.status(400).json({
+                message: "Token and policy acceptance are required."
+            });
+        }
+
+        const tokenData = verifyTempToken(token);
+        if (!tokenData) {
+            return res.status(400).json({
+                message: "Invalid or expired token. Please try again."
+            });
+        }
+
+        if (!privacyPolicy || !termsAndConditions) {
+            return res.status(400).json({
+                message: "You must accept the privacy policy and terms and conditions to continue."
+            });
+        }
+
+        const user = await User.findOne({ email: tokenData.email });
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found." });
+        }
+
+        // Update user to accept all policies
+        user.privacyPolicyAccepted = true;
+        user.termsAndConditionsAccepted = true;
+        user.acceptedPoliciesAt = new Date();
+        await user.save();
+
+        // Generate JWT and login
+        generateToken(user._id, res);
+        return res.status(200).json({
+            message: "Policies accepted successfully",
+            _id: user._id,
+            fullName: user.fullName,
+            email: user.email,
+            profilePic: user.profilePic || null,
+        });
+
+    } catch (error) {
+        console.error("Error accepting policies:", error);
+        return res.status(500).json({ message: "Server error." });
+    }
+};
