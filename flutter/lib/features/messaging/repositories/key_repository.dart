@@ -7,6 +7,28 @@ class KeyRepository {
 
   KeyRepository({required ApiClient apiClient}) : _apiClient = apiClient;
 
+  /// Register device with identity key
+  Future<void> registerDevice({
+    required String identityPublicKey,
+    required int registrationId,
+    String? label,
+    String? platform,
+  }) async {
+    try {
+      await _apiClient.post(
+        '${ApiConstants.device}/register',
+        data: {
+          'identityPublicKey': identityPublicKey,
+          'registrationId': registrationId,
+          if (label != null) 'label': label,
+          if (platform != null) 'platform': platform,
+        },
+      );
+    } on ServerException {
+      rethrow;
+    }
+  }
+
   /// Get pre-key bundle for a user to create encrypted session
   Future<Map<String, dynamic>> getPreKeyBundle(String userId) async {
     try {

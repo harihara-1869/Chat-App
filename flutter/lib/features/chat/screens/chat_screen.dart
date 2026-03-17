@@ -239,8 +239,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     try {
       final messagingService = ref.read(encryptedMessagingServiceProvider);
       
+      // Use otherUserId as conversationId for simplicity
+      final conversationId = widget.otherUserId;
+      
       await messagingService.sendMessage(
         recipientId: widget.otherUserId,
+        conversationId: conversationId,
         plaintext: text,
       );
 

@@ -1,12 +1,8 @@
-import 'dart:typed_data';
-
-import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:libsignal/libsignal.dart';
 
 import 'database/app_database.dart';
 import 'database/database_provider.dart';
-import 'secure_key_store.dart';
 
 class DriftSignalSessionStore implements SessionStore {
   final AppDatabase _db;
@@ -18,13 +14,13 @@ class DriftSignalSessionStore implements SessionStore {
 
   @override
   Future<SessionRecord?> loadSession(ProtocolAddress address) async {
-    final key = _cacheKey(address.name, address.deviceId);
+    final key = _cacheKey(address.name(), address.deviceId());
 
     if (_cache.containsKey(key)) {
       return _cache[key];
     }
 
-    final session = await _db.getSession(address.name, address.deviceId);
+    final session = await _db.getSession(address.name(), address.deviceId());
     if (session == null) return null;
 
     final record = SessionRecord.deserialize(bytes: session.record);
@@ -34,33 +30,33 @@ class DriftSignalSessionStore implements SessionStore {
 
   @override
   Future<void> storeSession(ProtocolAddress address, SessionRecord record) async {
-    final key = _cacheKey(address.name, address.deviceId);
+    final key = _cacheKey(address.name(), address.deviceId());
     _cache[key] = record;
 
     await _db.insertSession(
-      addressName: address.name,
-      deviceId: address.deviceId,
+      addressName: address.name(),
+      deviceId: address.deviceId(),
       recordBytes: record.serialize(),
     );
   }
 
   @override
   Future<bool> containsSession(ProtocolAddress address) async {
-    final key = _cacheKey(address.name, address.deviceId);
+    final key = _cacheKey(address.name(), address.deviceId());
 
     if (_cache.containsKey(key)) {
       return true;
     }
 
-    return await _db.hasSession(address.name, address.deviceId);
+    return await _db.hasSession(address.name(), address.deviceId());
   }
 
   @override
   Future<void> deleteSession(ProtocolAddress address) async {
-    final key = _cacheKey(address.name, address.deviceId);
+    final key = _cacheKey(address.name(), address.deviceId());
     _cache.remove(key);
 
-    await _db.deleteSession(address.name, address.deviceId);
+    await _db.deleteSession(address.name(), address.deviceId());
   }
 
   @override
@@ -102,6 +98,9 @@ class DriftSignalSessionStore implements SessionStore {
 }
 
 final driftSessionStoreProvider = Provider<DriftSignalSessionStore>((ref) {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(appDatabaseProvider).value;
+  if (db == null) {
+    throw StateError('AppDatabase not initialized');
+  }
   return DriftSignalSessionStore(db);
 });

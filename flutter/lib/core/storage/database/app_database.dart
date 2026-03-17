@@ -180,10 +180,9 @@ class AppDatabase extends _$AppDatabase {
 
   Future<List<int>> getSubDeviceSessions(String addressName) async {
     final results = await (select(sessions)
-      ..where((s) => s.addressName.equals(addressName))
-      ..selectOnly(s, s.deviceId))
+      ..where((s) => s.addressName.equals(addressName)))
         .get();
-    return results.map((row) => row.read(s.deviceId)!).toList();
+    return results.map((row) => row.deviceId).toList();
   }
 
   // ==================== Identity Key Operations ====================
@@ -246,6 +245,11 @@ class AppDatabase extends _$AppDatabase {
     return (delete(preKeys)..where((p) => p.preKeyId.equals(preKeyId))).go();
   }
 
+  Future<List<int>> getAllPreKeyIds() async {
+    final results = await select(preKeys).get();
+    return results.map((row) => row.preKeyId).toList();
+  }
+
   // ==================== Signed PreKey Operations ====================
 
   Future<int> insertSignedPreKey({
@@ -268,6 +272,15 @@ class AppDatabase extends _$AppDatabase {
       ..where((p) => p.signedPreKeyId.equals(signedPreKeyId)))
         .getSingleOrNull();
     return result?.record;
+  }
+
+  Future<List<int>> getAllSignedPreKeyIds() async {
+    final results = await select(signedPreKeys).get();
+    return results.map((row) => row.signedPreKeyId).toList();
+  }
+
+  Future<int> deleteSignedPreKey(int signedPreKeyId) {
+    return (delete(signedPreKeys)..where((p) => p.signedPreKeyId.equals(signedPreKeyId))).go();
   }
 
   // ==================== Kyber PreKey Operations ====================
@@ -299,6 +312,15 @@ class AppDatabase extends _$AppDatabase {
     return (update(kyberPreKeys)
       ..where((k) => k.kyberPreKeyId.equals(kyberPreKeyId)))
         .write(const KyberPreKeysCompanion(isUsed: Value(true)));
+  }
+
+  Future<List<int>> getAllKyberPreKeyIds() async {
+    final results = await select(kyberPreKeys).get();
+    return results.map((row) => row.kyberPreKeyId).toList();
+  }
+
+  Future<int> deleteKyberPreKey(int kyberPreKeyId) {
+    return (delete(kyberPreKeys)..where((k) => k.kyberPreKeyId.equals(kyberPreKeyId))).go();
   }
 
   // ==================== Skipped Keys Operations ====================

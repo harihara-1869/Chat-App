@@ -1,6 +1,11 @@
 export 'database/app_database.dart';
 export 'database/database_provider.dart';
 export 'session_store.dart';
+export 'identity_key_store.dart';
+export 'pre_key_store.dart';
+export 'signed_pre_key_store.dart';
+export 'kyber_pre_key_store.dart';
+export 'signal_store_bundle.dart';
 export 'skipped_keys_store.dart';
 export 'secure_key_store.dart';
 export 'message_store.dart';

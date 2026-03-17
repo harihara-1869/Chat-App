@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../network/api_client.dart';
+import '../storage/database/app_database.dart';
 import '../storage/database/database_provider.dart';
-import '../storage/session_store.dart';
+import '../storage/signal_store_bundle.dart';
 import '../storage/message_store.dart';
-import '../storage/secure_storage_service.dart';
 import '../signal/signal_service.dart';
 import '../../features/messaging/repositories/key_repository.dart';
 import '../../features/messaging/models/message.dart';
@@ -13,20 +13,20 @@ class EncryptedMessagingService {
   final SignalService _signalService;
   final KeyRepository _keyRepository;
   final MessageStore _messageStore;
-  final SessionStore _sessionStore;
   final ApiClient _apiClient;
+  final AppDatabase _db;
 
   EncryptedMessagingService({
     required SignalService signalService,
     required KeyRepository keyRepository,
     required MessageStore messageStore,
-    required SessionStore sessionStore,
     required ApiClient apiClient,
+    required AppDatabase db,
   })  : _signalService = signalService,
         _keyRepository = keyRepository,
         _messageStore = messageStore,
-        _sessionStore = sessionStore,
-        _apiClient = apiClient;
+        _apiClient = apiClient,
+        _db = db;
 
   Future<void> initialize() async {
     await _signalService.initialize();
@@ -74,20 +74,40 @@ class EncryptedMessagingService {
 
   Future<Map<String, dynamic>> sendMessage({
     required String recipientId,
+    required String conversationId,
     required String plaintext,
     List<Attachment>? attachments,
   }) async {
-    await createSession(recipientId);
+    Map<String, dynamic>? bundle;
+    final hasSession = await _signalService.hasSession(recipientId);
+    if (!hasSession) {
+      bundle = await _keyRepository.getPreKeyBundle(recipientId);
+    }
 
-    final encrypted = await _signalService.encryptMessage(recipientId, plaintext);
+    final encrypted = await _signalService.encryptMessage(
+      recipientId: recipientId,
+      plaintext: plaintext,
+      preKeyBundle: bundle,
+    );
 
     final response = await _apiClient.post(
-      '/api/message/send/$recipientId',
+      '/api/message/send',
       data: {
-        'type': encrypted['type'] == 1 ? 'prekey' : 'message',
+        'recipientId': recipientId,
+        'type': encrypted['type'],
         'ciphertext': encrypted['ciphertext'],
-        if (attachments != null && attachments.isNotEmpty)
-          'attachments': attachments.map((e) => e.toJson()).toList(),
+        if (encrypted['type'] == 'prekey' && bundle != null)
+          'preKeyBundle': {
+            'identityKey': bundle['identityKey'],
+            'signedPreKeyId': bundle['signedPreKey']['keyId'],
+            'signedPreKeyPublic': bundle['signedPreKey']['publicKey'],
+            'signedPreKeySignature': bundle['signedPreKey']['signature'],
+            if (bundle['oneTimePreKey'] != null) ...{
+              'oneTimePreKeyId': bundle['oneTimePreKey']['keyId'],
+              'oneTimePreKeyPublic': bundle['oneTimePreKey']['publicKey'],
+            },
+          },
+        'attachments': attachments?.map((e) => e.toJson()).toList() ?? [],
       },
     );
 
@@ -95,7 +115,7 @@ class EncryptedMessagingService {
 
     await _messageStore.storeMessage(
       messageId: serverMessage['_id'],
-      conversationId: serverMessage['conversationId'] ?? '',
+      conversationId: conversationId,
       senderId: serverMessage['senderId'],
       receiverId: serverMessage['receiverId'],
       plaintext: plaintext,
@@ -107,28 +127,35 @@ class EncryptedMessagingService {
     return serverMessage;
   }
 
-  Future<String> decryptMessage(String senderId, Map<String, dynamic> message) async {
-    return await _signalService.decryptMessage(senderId, {
-      'ciphertext': message['ciphertext'],
-      'type': message['type'],
-    });
-  }
+  Future<String> decryptAndStoreMessage({
+    required String senderId,
+    required String conversationId,
+    required Map<String, dynamic> message,
+    required String serverMessageId,
+    DateTime? createdAt,
+  }) async {
+    return await _db.runInTransaction((db) async {
+      final plaintext = await _signalService.decryptMessage(
+        senderId: senderId,
+        payload: {
+          'ciphertext': message['ciphertext'],
+          'type': message['type'],
+        },
+      );
 
-  Future<void> storeIncomingMessage(
-    String senderId,
-    String plaintext,
-    Map<String, dynamic> serverMessage,
-  ) async {
-    await _messageStore.storeMessage(
-      messageId: serverMessage['_id'],
-      conversationId: serverMessage['conversationId'] ?? '',
-      senderId: serverMessage['senderId'],
-      receiverId: serverMessage['receiverId'],
-      plaintext: plaintext,
-      ciphertext: serverMessage['ciphertext'],
-      type: serverMessage['type'],
-      otherUserId: senderId,
-    );
+      await _messageStore.storeMessage(
+        messageId: serverMessageId,
+        conversationId: conversationId,
+        senderId: message['senderId'] ?? senderId,
+        receiverId: message['receiverId'] ?? '',
+        plaintext: plaintext,
+        ciphertext: message['ciphertext'],
+        type: message['type'],
+        otherUserId: senderId,
+      );
+
+      return plaintext;
+    });
   }
 
   Future<List<Map<String, dynamic>>> getLocalMessages(String otherUserId) async {
@@ -144,55 +171,36 @@ final keyRepositoryProvider = Provider<KeyRepository>((ref) {
   return KeyRepository(apiClient: ApiClient());
 });
 
-// Provider that returns the service synchronously (waits for DB internally)
 final encryptedMessagingServiceProvider = Provider<EncryptedMessagingService>((ref) {
-  // This will throw if DB isn't ready - UI should handle loading state
   final signalService = ref.watch(signalServiceProvider);
   final keyRepository = ref.watch(keyRepositoryProvider);
+  final messageStore = ref.watch(messageStoreProvider).value;
+  final db = ref.watch(appDatabaseProvider).value;
   
-  // These are async but we'll handle them differently
-  final messageStoreAsync = ref.watch(messageStoreProvider);
-  final sessionStoreAsync = ref.watch(sessionStoreProvider);
-  
-  final messageStore = messageStoreAsync.when(
-    data: (store) => store,
-    loading: () => throw StateError('Database not initialized'),
-    error: (e, _) => throw e,
-  );
-  
-  final sessionStore = sessionStoreAsync.when(
-    data: (store) => store,
-    loading: () => throw StateError('Database not initialized'),
-    error: (e, _) => throw e,
-  );
+  if (messageStore == null || db == null) {
+    throw StateError('Database not initialized');
+  }
 
   return EncryptedMessagingService(
     signalService: signalService,
     keyRepository: keyRepository,
     messageStore: messageStore,
-    sessionStore: sessionStore,
     apiClient: ApiClient(),
+    db: db,
   );
 });
 
-// FutureProvider version for when you need to await initialization
 final encryptedMessagingServiceAsyncProvider = FutureProvider<EncryptedMessagingService>((ref) async {
   final signalService = ref.watch(signalServiceProvider);
   final keyRepository = ref.watch(keyRepositoryProvider);
   final messageStore = await ref.watch(messageStoreProvider.future);
-  final sessionStore = await ref.watch(sessionStoreProvider.future);
+  final db = await ref.watch(appDatabaseProvider.future);
 
   return EncryptedMessagingService(
     signalService: signalService,
     keyRepository: keyRepository,
     messageStore: messageStore,
-    sessionStore: sessionStore,
     apiClient: ApiClient(),
+    db: db,
   );
-});
-
-// Signal service provider using secure storage
-final signalServiceProvider = Provider<SignalService>((ref) {
-  final secureStorage = SecureStorageService();
-  return SignalService(secureStorage: secureStorage);
 });

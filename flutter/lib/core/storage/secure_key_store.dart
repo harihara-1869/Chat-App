@@ -10,6 +10,7 @@ import 'database/database_provider.dart';
 const _identityPrivateKeyStorageKey = 'identity_private_key';
 const _identityPublicKeyStorageKey = 'identity_public_key';
 const _registrationIdStorageKey = 'registration_id';
+const _nextOneTimePreKeyIdStorageKey = 'next_onetime_prekey_id';
 
 class SecureKeyStore {
   final FlutterSecureStorage _storage;
@@ -78,6 +79,21 @@ class SecureKeyStore {
       value: base64Encode(newKey),
     );
     return newKey;
+  }
+
+  Future<void> storeNextOneTimePreKeyId(int id) async {
+    await _storage.write(
+      key: _nextOneTimePreKeyIdStorageKey,
+      value: id.toString(),
+    );
+  }
+
+  Future<int> getNextOneTimePreKeyId() async {
+    final id = await _storage.read(key: _nextOneTimePreKeyIdStorageKey);
+    if (id == null) {
+      return 0;
+    }
+    return int.parse(id);
   }
 
   Uint8List _generateSecureKey() {

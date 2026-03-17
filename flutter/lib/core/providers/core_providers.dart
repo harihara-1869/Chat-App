@@ -6,6 +6,7 @@ import '../socket/socket_service.dart';
 import '../storage/secure_storage_service.dart';
 import '../storage/database/database_provider.dart';
 import '../storage/message_store.dart';
+import '../storage/signal_store_bundle.dart';
 
 /// Provider for the API Client
 final apiClientProvider = Provider<ApiClient>((ref) {
@@ -56,8 +57,8 @@ final isAuthenticatedProvider = FutureProvider<bool>((ref) async {
 
 /// Provider for Signal Protocol Service (E2EE)
 final signalServiceProvider = Provider<SignalService>((ref) {
-  final secureStorage = ref.watch(secureStorageProvider);
-  final signalService = SignalService(secureStorage: secureStorage);
+  final bundle = ref.watch(signalStoreBundleProvider);
+  final signalService = SignalService(bundle: bundle);
 
   ref.onDispose(() {
     signalService.dispose();
