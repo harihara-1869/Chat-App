@@ -1,0 +1,56 @@
+name: chat_app
+description: A real-time chat application with E2EE using Signal Protocol.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.4.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Networking
+  dio: ^5.7.0
+  dio_cookie_manager: ^3.1.1
+  cookie_jar: ^4.0.8
+
+  # Real-time
+  socket_io_client: ^2.0.3+1
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Navigation
+  go_router: ^14.0.0
+
+  # Secure Storage (for E2EE keys)
+  flutter_secure_storage: ^9.0.0
+
+  # Signal Protocol for E2EE
+  libsignal: ^2.7.2
+
+  # UI & Media
+  image_picker: ^1.1.2
+  cached_network_image: ^3.3.1
+
+  # Utilities
+  freezed_annotation: ^2.4.1
+  json_annotation: ^4.8.1
+  equatable: ^2.0.5
+  uuid: ^4.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+  # Code Generation
+  riverpod_generator: ^2.4.0
+  build_runner: ^2.4.9
+  freezed: ^2.5.2
+  json_serializable: ^6.7.1
+
+flutter:
+  uses-material-design: true
