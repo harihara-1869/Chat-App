@@ -4,6 +4,8 @@ import '../network/api_client.dart';
 import '../signal/signal_service.dart';
 import '../socket/socket_service.dart';
 import '../storage/secure_storage_service.dart';
+import '../storage/database/database_provider.dart';
+import '../storage/message_store.dart';
 
 /// Provider for the API Client
 final apiClientProvider = Provider<ApiClient>((ref) {
@@ -26,6 +28,12 @@ final secureStorageProvider = Provider<SecureStorageService>((ref) {
     // Cleanup if needed
   });
   return storage;
+});
+
+/// Provider for Message Store (local plain-text messages - encrypted SQLite)
+final messageStoreProvider = FutureProvider<MessageStore>((ref) async {
+  final db = await ref.watch(appDatabaseProvider.future);
+  return MessageStore(db);
 });
 
 /// Provider for Socket Service

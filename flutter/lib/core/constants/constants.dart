@@ -59,6 +59,8 @@ class StorageKeys {
   static const String signedPreKeySignature = 'signed_prekey_signature';
   static const String oneTimePreKeys = 'one_time_prekeys';
   static const String sessionStore = 'session_store';
+  static const String messageStore = 'messages';
+  static const String signalSessions = 'signal_sessions';
 
   /// Regular storage (non-sensitive)
   static const String userId = 'user_id';

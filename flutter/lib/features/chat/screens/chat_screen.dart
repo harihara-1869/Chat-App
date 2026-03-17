@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/constants.dart';
+import '../../../core/core.dart';
+import '../../../core/services/encrypted_messaging_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../messaging/models/message.dart';
 import '../../messaging/providers/messaging_provider.dart';
@@ -22,6 +24,32 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
+  bool _isInitializing = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeEncryption();
+  }
+
+  Future<void> _initializeEncryption() async {
+    try {
+      final messagingService = ref.read(encryptedMessagingServiceProvider);
+      await messagingService.initialize();
+      
+      // Check if we have keys, if not generate them
+      final bundle = await messagingService.getPreKeyBundle();
+      if (bundle == null) {
+        await messagingService.generateAndUploadKeys();
+      }
+    } catch (e) {
+      debugPrint('Error initializing encryption: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isInitializing = false);
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -45,12 +73,33 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final chatState = ref.watch(chatProvider(widget.otherUserId));
     final currentUser = ref.watch(currentUserProvider);
 
-    // Scroll to bottom when new message arrives
     ref.listen(chatProvider(widget.otherUserId), (previous, next) {
       if (previous?.messages.length != next.messages.length) {
         Future.microtask(_scrollToBottom);
       }
     });
+
+    if (_isInitializing) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.go(RoutePaths.home),
+          ),
+          title: const Text('Chat'),
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Initializing encryption...'),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -59,6 +108,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           onPressed: () => context.go(RoutePaths.home),
         ),
         title: const Text('Chat'), // TODO: Get other user's name
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.lock),
+            onPressed: () {
+              _showEncryptionInfo(context);
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -72,21 +129,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              Icons.chat_bubble_outline,
+                              Icons.lock_outline,
                               size: 64,
                               color: Colors.grey[400],
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'No messages yet',
+                              'End-to-end encrypted',
                               style: TextStyle(
                                 fontSize: 18,
                                 color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Send a message to start the conversation',
+                              'Messages are encrypted and stored locally',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey[500],
@@ -178,13 +236,60 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void _sendMessage(String text) async {
     _messageController.clear();
 
-    // TODO: Encrypt message using Signal Protocol before sending
-    // This is where you'd integrate with native platform channels for E2EE
+    try {
+      final messagingService = ref.read(encryptedMessagingServiceProvider);
+      
+      await messagingService.sendMessage(
+        recipientId: widget.otherUserId,
+        plaintext: text,
+      );
 
-    await ref.read(chatProvider(widget.otherUserId).notifier).sendMessage(
-          type: 'message', // or 'prekey' for first message
-          ciphertext: text, // This should be encrypted!
+      // Refresh messages from local storage
+      ref.read(chatProvider(widget.otherUserId).notifier).refresh();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send message: $e')),
         );
+      }
+    }
+  }
+
+  void _showEncryptionInfo(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.lock, color: Color(0xFF6366F1)),
+            SizedBox(width: 8),
+            Text('End-to-End Encryption'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Your messages are protected using the Signal Protocol:',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+            SizedBox(height: 12),
+            Text('• Messages are encrypted on your device'),
+            Text('• Only you and the recipient can read them'),
+            Text('• Plain text is stored locally on your device'),
+            Text('• Server only sees encrypted text'),
+            Text('• Uses Double Ratchet encryption'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -216,21 +321,33 @@ class _MessageBubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // For E2EE, display encrypted content placeholder
-            // In production, you'd decrypt and display the actual message
             Text(
-              isMe ? 'Encrypted message sent' : message.ciphertext,
+              message.plaintext ?? 'Encrypted message',
               style: TextStyle(
                 color: isMe ? Colors.white : Colors.black,
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              _formatTime(message.createdAt),
-              style: TextStyle(
-                fontSize: 10,
-                color: isMe ? Colors.white70 : Colors.grey[600],
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!isMe)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 4),
+                    child: Icon(
+                      Icons.lock,
+                      size: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
+                Text(
+                  _formatTime(message.createdAt),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isMe ? Colors.white70 : Colors.grey[600],
+                  ),
+                ),
+              ],
             ),
           ],
         ),

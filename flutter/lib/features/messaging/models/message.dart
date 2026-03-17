@@ -15,6 +15,7 @@ class Message extends Equatable {
   final int? registrationId;
   final List<Attachment> attachments;
   final DateTime createdAt;
+  final String? plaintext; // Decrypted plaintext (stored locally only)
 
   const Message({
     required this.id,
@@ -30,6 +31,7 @@ class Message extends Equatable {
     this.registrationId,
     this.attachments = const [],
     required this.createdAt,
+    this.plaintext,
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
@@ -50,6 +52,7 @@ class Message extends Equatable {
               .toList() ??
           [],
       createdAt: DateTime.parse(json['createdAt'] as String),
+      plaintext: json['plaintext'] as String?,
     );
   }
 
@@ -66,7 +69,27 @@ class Message extends Equatable {
       if (preKeyBundle != null) 'preKeyBundle': preKeyBundle,
       if (registrationId != null) 'registrationId': registrationId,
       'attachments': attachments.map((e) => e.toJson()).toList(),
+      if (plaintext != null) 'plaintext': plaintext,
     };
+  }
+
+  Message copyWithPlaintext(String newPlaintext) {
+    return Message(
+      id: id,
+      conversationId: conversationId,
+      senderId: senderId,
+      senderDeviceId: senderDeviceId,
+      receiverId: receiverId,
+      recipientDeviceId: recipientDeviceId,
+      type: type,
+      ciphertext: ciphertext,
+      ratchetHeader: ratchetHeader,
+      preKeyBundle: preKeyBundle,
+      registrationId: registrationId,
+      attachments: attachments,
+      createdAt: createdAt,
+      plaintext: newPlaintext,
+    );
   }
 
   bool get isPreKeyMessage => type == 'prekey';
@@ -87,6 +110,7 @@ class Message extends Equatable {
         registrationId,
         attachments,
         createdAt,
+        plaintext,
       ];
 }
 

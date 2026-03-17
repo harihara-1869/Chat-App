@@ -4,10 +4,11 @@ import 'dart:typed_data';
 import 'package:libsignal/libsignal.dart';
 
 import '../storage/secure_storage_service.dart';
+import 'persistent_session_store.dart';
 
 class SignalService {
   final SecureStorageService _secureStorage;
-  late SessionStore _sessionStore;
+  late PersistentSessionStore _sessionStore;
   late PreKeyStore _preKeyStore;
   late SignedPreKeyStore _signedPreKeyStore;
   late KyberPreKeyStore _kyberPreKeyStore;
@@ -22,7 +23,7 @@ class SignalService {
   }
 
   void _initializeStores() {
-    _sessionStore = InMemorySessionStore();
+    _sessionStore = PersistentSessionStore();
     _preKeyStore = InMemoryPreKeyStore();
     _signedPreKeyStore = InMemorySignedPreKeyStore();
     _kyberPreKeyStore = InMemoryKyberPreKeyStore();
@@ -332,7 +333,7 @@ class SignalService {
   }
 
   Future<void> deleteAllSessions() async {
-    _sessionStore = InMemorySessionStore();
+    await _sessionStore.clearAll();
     await _secureStorage.clearE2EEKeys();
   }
 
