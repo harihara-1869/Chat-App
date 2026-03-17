@@ -2,3 +2,6 @@ Internal_Documentation_1.md
 Internal_Documentation_2.md
 node_modules
 .env
+
+.vscode
+.claude
