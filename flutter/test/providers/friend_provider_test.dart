@@ -51,6 +51,10 @@ void main() {
     when(() => mockSocketService.onFriendRequest).thenAnswer((_) => const Stream.empty());
     when(() => mockSocketService.onFriendAccepted).thenAnswer((_) => const Stream.empty());
 
+    // Setup default mock responses for repository methods
+    when(() => mockFriendRepository.getFriends()).thenAnswer((_) async => []);
+    when(() => mockFriendRepository.getPendingRequests()).thenAnswer((_) async => []);
+
     friendsNotifier = FriendsNotifier(
       friendRepository: mockFriendRepository,
       socketService: mockSocketService,
@@ -88,11 +92,12 @@ void main() {
     });
 
     test('loadFriends should update friends and pending requests', () async {
+      // Re-configure mocks to return test data
       when(() => mockFriendRepository.getFriends()).thenAnswer((_) async => testFriends);
       when(() => mockFriendRepository.getPendingRequests()).thenAnswer((_) async => testPendingRequests);
 
-      // Wait for initial load to complete
-      await Future.delayed(const Duration(milliseconds: 100));
+      // Call refresh to trigger the load with new mock data
+      await friendsNotifier.refresh();
 
       expect(friendsNotifier.state.friends, testFriends);
       expect(friendsNotifier.state.pendingRequests, testPendingRequests);
@@ -236,11 +241,6 @@ void main() {
 
   group('onlineFriendsProvider', () {
     test('should filter online friends', () {
-      const state = FriendsState(friends: [
-        Friend(id: '1', username: 'user1', email: 'a@b.com', isOnline: true, friendsSince: testDateTime),
-        Friend(id: '2', username: 'user2', email: 'b@b.com', isOnline: false, friendsSince: testDateTime),
-      ]);
-
       final friendsList = [
         Friend(id: '1', username: 'user1', email: 'a@b.com', isOnline: true, friendsSince: testDateTime),
         Friend(id: '2', username: 'user2', email: 'b@b.com', isOnline: false, friendsSince: testDateTime),

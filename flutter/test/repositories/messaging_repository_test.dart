@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:chat_app/features/messaging/repositories/messaging_repository.dart';
@@ -174,7 +175,12 @@ void main() {
 }
 
 // Helper class for mock responses
-class _MockResponse {
+class _MockResponse extends Fake implements Response<dynamic> {
+  @override
   final dynamic data;
+
   _MockResponse({required this.data});
+
+  @override
+  Response<T> cast<T>() => throw UnimplementedError();
 }

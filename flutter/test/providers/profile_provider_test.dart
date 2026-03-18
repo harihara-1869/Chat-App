@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:chat_app/features/profile/providers/profile_provider.dart';
 import 'package:chat_app/features/profile/repositories/profile_repository.dart';
+import 'package:chat_app/features/profile/models/profile.dart';
 import 'package:chat_app/core/storage/secure_storage_service.dart';
 
 class MockProfileRepository extends Mock implements ProfileRepository {}

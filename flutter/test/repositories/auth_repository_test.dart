@@ -238,7 +238,12 @@ void main() {
 }
 
 // Helper class for mock responses
-class _MockResponse {
+class _MockResponse extends Fake implements Response<dynamic> {
+  @override
   final dynamic data;
+
   _MockResponse({required this.data});
+
+  @override
+  Response<T> cast<T>() => throw UnimplementedError();
 }

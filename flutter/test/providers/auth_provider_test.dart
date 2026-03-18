@@ -203,6 +203,16 @@ void main() {
       );
 
       // Manually set state to simulate user who needs to accept policies
+      authNotifier.state = AuthState(
+        status: AuthStatus.needsPolicyAcceptance,
+        user: User(
+          id: 'user1',
+          username: 'testuser',
+          email: 'test@example.com',
+          createdAt: DateTime(2024, 1, 1),
+        ),
+      );
+
       when(() => mockAuthRepository.acceptPolicies()).thenAnswer((_) async {});
       when(() => mockSocketService.connect()).thenAnswer((_) async {});
 

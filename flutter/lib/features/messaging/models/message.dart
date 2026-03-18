@@ -176,13 +176,23 @@ class Conversation extends Equatable {
   });
 
   factory Conversation.fromJson(Map<String, dynamic> json) {
+    Message? lastMessage;
+    String? lastMessageId;
+
+    if (json['lastMessage'] != null) {
+      if (json['lastMessage'] is Map<String, dynamic>) {
+        lastMessage = Message.fromJson(json['lastMessage'] as Map<String, dynamic>);
+        lastMessageId = lastMessage.id;
+      } else if (json['lastMessage'] is String) {
+        lastMessageId = json['lastMessage'] as String;
+      }
+    }
+
     return Conversation(
       id: json['_id'] as String,
       participants: List<String>.from(json['participants']),
-      lastMessageId: json['lastMessage'] as String?,
-      lastMessage: json['lastMessage'] != null
-          ? Message.fromJson(json['lastMessage'] as Map<String, dynamic>)
-          : null,
+      lastMessageId: lastMessageId,
+      lastMessage: lastMessage,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'] as String)

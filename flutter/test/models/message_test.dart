@@ -218,7 +218,17 @@ void main() {
       final json = {
         '_id': 'conv1',
         'participants': ['user1', 'user2'],
-        'lastMessage': 'msg1',
+        'lastMessage': {
+          '_id': 'msg1',
+          'conversationId': 'conv1',
+          'senderId': 'user1',
+          'senderDeviceId': 1,
+          'receiverId': 'user2',
+          'recipientDeviceId': 1,
+          'type': 'message',
+          'ciphertext': 'encrypted',
+          'createdAt': '2024-01-01T12:00:00.000',
+        },
         'createdAt': '2024-01-01T12:00:00.000',
         'updatedAt': '2024-01-02T12:00:00.000',
       };
@@ -228,6 +238,8 @@ void main() {
       expect(conversation.id, 'conv1');
       expect(conversation.participants, ['user1', 'user2']);
       expect(conversation.lastMessageId, 'msg1');
+      expect(conversation.lastMessage, isNotNull);
+      expect(conversation.lastMessage?.id, 'msg1');
       expect(conversation.updatedAt, isNotNull);
     });
   });

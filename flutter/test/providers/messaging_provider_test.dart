@@ -17,7 +17,7 @@ class MockStreamController<T> {
 
   void add(T event) => _controller.add(event);
 
-  void dispose() => _controller.dispose();
+  void dispose() => _controller.close();
 }
 
 void main() {

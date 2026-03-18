@@ -88,24 +88,17 @@ void main() {
 
     group('sendFriendRequest', () {
       test('should call API to send friend request', () async {
-        when(() => mockApiClient.post(
-          any(),
-          data: any(named: 'data'),
-        )).thenAnswer((_) async => _MockResponse(data: {}));
+        when(() => mockApiClient.post(any()))
+            .thenAnswer((_) async => _MockResponse(data: {}));
 
         await friendRepository.sendFriendRequest('user123');
 
-        verify(() => mockApiClient.post(
-          '/api/friend/request',
-          data: {'userId': 'user123'},
-        )).called(1);
+        verify(() => mockApiClient.post('/api/friend/request/user123')).called(1);
       });
 
       test('should throw ServerException on failure', () async {
-        when(() => mockApiClient.post(
-          any(),
-          data: any(named: 'data'),
-        )).thenThrow(const ServerException(message: 'Cannot send friend request'));
+        when(() => mockApiClient.post(any()))
+            .thenThrow(const ServerException(message: 'Cannot send friend request'));
 
         expect(
           () => friendRepository.sendFriendRequest('user123'),
@@ -140,7 +133,7 @@ void main() {
 
         await friendRepository.removeFriend('friend123');
 
-        verify(() => mockApiClient.delete('/api/friend/friend123')).called(1);
+        verify(() => mockApiClient.delete('/api/friend/remove/friend123')).called(1);
       });
     });
 
@@ -180,7 +173,12 @@ void main() {
 }
 
 // Helper class for mock responses
-class _MockResponse {
+class _MockResponse extends Fake implements Response<dynamic> {
+  @override
   final dynamic data;
+
   _MockResponse({required this.data});
+
+  @override
+  Response<T> cast<T>() => throw UnimplementedError();
 }
