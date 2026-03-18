@@ -1,25 +1,55 @@
-import { getReciverSocketId } from "../lib/socket.js";
+import { getReciverSocketId, bufferPendingEvent } from "../lib/socket.js";
 import Message from "../models/message.model.js";
 import Conversation from "../models/conversation.model.js";
 import Device from "../models/device.model.js";
 import { io } from "../lib/socket.js";
 
 /**
- * Get messages between two users.
+ * Get messages between two users with pagination.
+ * 
+ * Query params:
+ * - limit: number of messages to return (default: 30, max: 100)
+ * - before: messageId to get messages older than (cursor-based pagination)
  */
 export const getMessages = async (req, res) => {
   try {
     const { id: userToChatId } = req.params;
     const senderId = req.user._id;
+    const limit = Math.min(parseInt(req.query.limit) || 30, 100);
+    const before = req.query.before;
 
-    const messages = await Message.find({
+    const query = {
       $or: [
         { senderId: senderId, receiverId: userToChatId },
         { senderId: userToChatId, receiverId: senderId },
       ],
-    }).sort({ createdAt: 1 });
+    };
 
-    res.status(200).json(messages);
+    // Cursor-based pagination
+    if (before) {
+      const beforeMessage = await Message.findById(before);
+      if (beforeMessage) {
+        query.createdAt = { $lt: beforeMessage.createdAt };
+      }
+    }
+
+    const messages = await Message.find(query)
+      .sort({ createdAt: -1 })
+      .limit(limit + 1) // Fetch one extra to determine hasMore
+      .lean();
+
+    const hasMore = messages.length > limit;
+    if (hasMore) {
+      messages.pop();
+    }
+
+    // Reverse to get oldest first
+    const sortedMessages = hasMore ? messages.reverse() : messages;
+
+    res.status(200).json({
+      messages: sortedMessages,
+      hasMore,
+    });
   } catch (error) {
     console.error("Error in getMessages controller:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -114,10 +144,15 @@ export const sendMessage = async (req, res) => {
     conversation.lastMessage = newMessage._id;
     await conversation.save();
 
-    // Emit to receiver if online
-    const receiverSocketId = getReciverSocketId(receiverId);
+    // Emit to receiver if online, otherwise buffer for later delivery
+    const receiverSocketId = getReciverSocketId(receiverId.toString());
+    const messagePayload = newMessage.toObject();
+    
     if (receiverSocketId) {
-      io.to(receiverSocketId).emit("newMessage", newMessage);
+      io.to(receiverSocketId).emit("newMessage", messagePayload);
+    } else {
+      // Buffer the message for offline delivery
+      await bufferPendingEvent(receiverId, "newMessage", messagePayload);
     }
 
     res.status(201).json(newMessage);

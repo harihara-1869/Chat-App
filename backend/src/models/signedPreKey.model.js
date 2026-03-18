@@ -24,12 +24,22 @@ const signedPreKeySchema = new mongoose.Schema(
       type: String, // base64
       required: true,
     },
+    status: {
+      type: String,
+      enum: ["active", "archived", "rotating"],
+      default: "active",
+    },
+    archivedAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );
 
 // One active signed prekey per user-device pair
-signedPreKeySchema.index({ userId: 1, deviceId: 1 }, { unique: true });
+signedPreKeySchema.index({ userId: 1, deviceId: 1, status: 1 });
+signedPreKeySchema.index({ userId: 1, deviceId: 1, createdAt: 1 });
 
 const SignedPreKey = mongoose.model("SignedPreKey", signedPreKeySchema);
 export default SignedPreKey;

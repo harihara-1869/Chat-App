@@ -15,6 +15,8 @@ import userRoutes from './routes/user.route.js';
 import privacyRoutes from './routes/privacy.route.js';
 import keyRoutes from './routes/keys.route.js';
 import deviceRoutes from './routes/device.route.js';
+import { flagOldSignedPreKeysForRotation } from './controllers/key.controller.js';
+import cron from 'node-cron';
 dotenv.config();
 
 
@@ -64,7 +66,14 @@ async function startServer() {
     await initDB();
     console.log("MongoDB connected");
 
-    // 2️⃣ Start server ONLY after DB is ready
+    // 2️⃣ Start scheduled jobs
+    // Run daily at midnight to check for old signed pre-keys
+    cron.schedule('0 0 * * *', () => {
+      console.log('[Cron] Running signed pre-key rotation check...');
+      flagOldSignedPreKeysForRotation();
+    });
+
+    // 3️⃣ Start server ONLY after DB is ready
     server.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on port ${PORT}`);
     });

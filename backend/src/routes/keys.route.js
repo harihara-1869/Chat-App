@@ -1,15 +1,21 @@
 import express from 'express';
 import { protectRoute } from '../middleware/auth.middleware.js';
-import { uploadSignedPreKey, uploadOneTimePreKey, getPreKeyBundle, getPreKeyCount } from '../controllers/key.controller.js';
+import { uploadSignedPreKey, uploadOneTimePreKey, getPreKeyBundle, getPreKeyCount, rotateSignedPreKey } from '../controllers/key.controller.js';
 
 const router = express.Router();
 
 router.post("/signed", protectRoute, uploadSignedPreKey);
 
+router.post("/rotate", protectRoute, rotateSignedPreKey);
+
 router.post("/one-time", protectRoute, uploadOneTimePreKey);
 
 router.get("/bundle/:userId", protectRoute, getPreKeyBundle);
 
+/**
+ * Get the count of remaining one-time pre-keys.
+ * Threshold: 10 keys. If count < 10, client should upload more.
+ */
 router.get("/count", protectRoute, getPreKeyCount);
 
 export default router;

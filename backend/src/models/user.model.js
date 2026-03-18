@@ -44,6 +44,14 @@ const userSchema = new mongoose.Schema(
       },
     ],
 
+    // Blocked users - cannot send messages or friend requests
+    blockedUsers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
     verificationToken: String,
     verificationTokenExpiresAt: Date,
 
