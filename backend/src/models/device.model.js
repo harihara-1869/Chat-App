@@ -32,6 +32,9 @@ const deviceSchema = new mongoose.Schema(
             enum: ["web", "ios", "android"],
             default: "web",
         },
+        fcmToken: {
+            type: String,
+        },
         lastSeenAt: {
             type: Date,
             default: Date.now,

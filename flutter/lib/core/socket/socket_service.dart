@@ -6,6 +6,12 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 import '../constants/constants.dart';
 import '../errors/exceptions.dart';
 
+enum ConnectionStatus {
+  connected,
+  reconnecting,
+  disconnected,
+}
+
 /// Socket service for real-time communication
 /// Uses the same cookie jar as the API client for authentication
 class SocketService {
@@ -18,7 +24,13 @@ class SocketService {
   final _typingController = StreamController<Map<String, dynamic>>.broadcast();
   final _friendRequestController = StreamController<Map<String, dynamic>>.broadcast();
   final _friendAcceptedController = StreamController<Map<String, dynamic>>.broadcast();
-  final _connectionStatusController = StreamController<bool>.broadcast();
+  final _connectionStatusController = StreamController<ConnectionStatus>.broadcast();
+
+  // Reconnection state
+  Timer? _reconnectTimer;
+  int _reconnectAttempt = 0;
+  bool _wasConnected = false;
+  static const List<int> _reconnectDelays = [1000, 2000, 4000, 8000, 16000, 30000];
 
   SocketService({required CookieJar cookieJar}) : _cookieJar = cookieJar;
 
@@ -38,7 +50,7 @@ class SocketService {
   Stream<Map<String, dynamic>> get onFriendAccepted => _friendAcceptedController.stream;
 
   /// Stream of connection status
-  Stream<bool> get onConnectionStatus => _connectionStatusController.stream;
+  Stream<ConnectionStatus> get onConnectionStatus => _connectionStatusController.stream;
 
   /// Check if connected
   bool get isConnected => _socket?.connected ?? false;
@@ -55,27 +67,47 @@ class SocketService {
         SocketConstants.wsUrl,
         io.OptionBuilder()
             .setTransports(['websocket'])
-            .enableAutoConnect()
-            .enableReconnection()
-            .setReconnectionAttempts(5)
-            .setReconnectionDelay(2000) // milliseconds, not Duration
+            .disableAutoConnect()
             .build(),
       );
 
       _setupListeners();
       _socket!.connect();
     } catch (e) {
-      _connectionStatusController.add(false);
+      _connectionStatusController.add(ConnectionStatus.disconnected);
       throw SocketException(message: 'Failed to connect: $e');
     }
   }
 
+  void _scheduleReconnect() {
+    if (_reconnectAttempt >= _reconnectDelays.length) {
+      _connectionStatusController.add(ConnectionStatus.disconnected);
+      return;
+    }
+
+    _connectionStatusController.add(ConnectionStatus.reconnecting);
+    final delay = _reconnectDelays[_reconnectAttempt];
+    _reconnectAttempt++;
+
+    _reconnectTimer = Timer(Duration(milliseconds: delay), () {
+      if (_socket?.connected != true) {
+        _socket?.connect();
+      }
+    });
+  }
+
+  void _resetReconnectState() {
+    _reconnectAttempt = 0;
+    _reconnectTimer?.cancel();
+  }
+
   /// Disconnect from WebSocket server
   void disconnect() {
+    _resetReconnectState();
     _socket?.disconnect();
     _socket?.dispose();
     _socket = null;
-    _connectionStatusController.add(false);
+    _connectionStatusController.add(ConnectionStatus.disconnected);
   }
 
   /// Emit typing event
@@ -107,19 +139,29 @@ class SocketService {
   void _setupListeners() {
     // Connection events
     _socket!.onConnect((_) {
-      _connectionStatusController.add(true);
+      if (_wasConnected) {
+        // This is a reconnect, notify listeners
+        _connectionStatusController.add(ConnectionStatus.connected);
+      } else {
+        _connectionStatusController.add(ConnectionStatus.connected);
+      }
+      _wasConnected = true;
+      _resetReconnectState();
     });
 
     _socket!.onDisconnect((_) {
-      _connectionStatusController.add(false);
+      _wasConnected = true;
+      _scheduleReconnect();
     });
 
     _socket!.onConnectError((error) {
-      _connectionStatusController.add(false);
+      _wasConnected = true;
+      _scheduleReconnect();
     });
 
     _socket!.onError((error) {
-      _connectionStatusController.add(false);
+      _wasConnected = true;
+      _scheduleReconnect();
     });
 
     // Message events

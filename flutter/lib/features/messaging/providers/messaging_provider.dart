@@ -18,6 +18,8 @@ class ChatState {
   final String odtherUserId;
   final List<Message> messages;
   final bool isLoading;
+  final bool isLoadingMore;
+  final bool hasMore;
   final bool isSending;
   final String? error;
 
@@ -25,6 +27,8 @@ class ChatState {
     required this.odtherUserId,
     this.messages = const [],
     this.isLoading = false,
+    this.isLoadingMore = false,
+    this.hasMore = true,
     this.isSending = false,
     this.error,
   });
@@ -33,6 +37,8 @@ class ChatState {
     String? odtherUserId,
     List<Message>? messages,
     bool? isLoading,
+    bool? isLoadingMore,
+    bool? hasMore,
     bool? isSending,
     String? error,
   }) {
@@ -40,6 +46,8 @@ class ChatState {
       odtherUserId: odtherUserId ?? this.odtherUserId,
       messages: messages ?? this.messages,
       isLoading: isLoading ?? this.isLoading,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      hasMore: hasMore ?? this.hasMore,
       isSending: isSending ?? this.isSending,
       error: error,
     );
@@ -71,14 +79,46 @@ class ChatNotifier extends StateNotifier<ChatState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final messages = await _messagingRepository.getMessages(state.odtherUserId);
+      final page = await _messagingRepository.getMessages(state.odtherUserId, limit: 30);
+      // Reverse so newest is at the end (for ListView builder)
+      final messages = page.messages.reversed.toList();
       state = state.copyWith(
         messages: messages,
+        hasMore: page.hasMore,
         isLoading: false,
       );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
+        error: e.toString(),
+      );
+    }
+  }
+
+  /// Load more messages (pagination)
+  Future<void> loadMore() async {
+    if (state.isLoadingMore || !state.hasMore || state.messages.isEmpty) return;
+
+    state = state.copyWith(isLoadingMore: true, error: null);
+
+    try {
+      final oldestMessageId = state.messages.first.id;
+      final page = await _messagingRepository.getMessages(
+        state.odtherUserId,
+        limit: 30,
+        before: oldestMessageId,
+      );
+      
+      // Prepend older messages (they are already reversed from repository)
+      final olderMessages = page.messages.reversed.toList();
+      state = state.copyWith(
+        messages: [...olderMessages, ...state.messages],
+        hasMore: page.hasMore,
+        isLoadingMore: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoadingMore: false,
         error: e.toString(),
       );
     }

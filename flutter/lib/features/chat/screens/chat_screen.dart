@@ -6,6 +6,7 @@ import '../../../core/constants/constants.dart';
 import '../../../core/core.dart';
 import '../../../core/services/encrypted_messaging_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../friends/providers/friend_provider.dart';
 import '../../messaging/models/message.dart';
 import '../../messaging/providers/messaging_provider.dart';
 
@@ -25,11 +26,47 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   bool _isInitializing = true;
+  ConnectionStatus _connectionStatus = ConnectionStatus.connected;
+  bool _hasDisconnected = false;
 
   @override
   void initState() {
     super.initState();
     _initializeEncryption();
+    _scrollController.addListener(_onScroll);
+    _listenToConnectionStatus();
+  }
+
+  void _listenToConnectionStatus() {
+    final socketService = ref.read(socketServiceProvider);
+    socketService.onConnectionStatus.listen((status) {
+      if (mounted) {
+        setState(() {
+          _connectionStatus = status;
+          if (status == ConnectionStatus.disconnected || status == ConnectionStatus.reconnecting) {
+            _hasDisconnected = true;
+          }
+        });
+        
+        if (status == ConnectionStatus.connected && _hasDisconnected) {
+          // Resync messages after reconnection
+          ref.read(chatProvider(widget.otherUserId).notifier).refresh();
+          
+          // Auto-dismiss after 2 seconds
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              setState(() => _hasDisconnected = false);
+            }
+          });
+        }
+      }
+    });
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.minScrollExtent == _scrollController.offset) {
+      ref.read(chatProvider(widget.otherUserId).notifier).loadMore();
+    }
   }
 
   Future<void> _initializeEncryption() async {
@@ -109,6 +146,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         title: const Text('Chat'), // TODO: Get other user's name
         actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'unfriend') {
+                _showUnfriendConfirmation(context);
+              } else if (value == 'block') {
+                _showBlockConfirmation(context);
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'unfriend',
+                child: Row(
+                  children: [
+                    Icon(Icons.person_remove, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Unfriend'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'block',
+                child: Row(
+                  children: [
+                    Icon(Icons.block, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Block'),
+                  ],
+                ),
+              ),
+            ],
+          ),
           IconButton(
             icon: const Icon(Icons.lock),
             onPressed: () {
@@ -119,6 +187,39 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
       body: Column(
         children: [
+          // Connection status banner
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            height: _hasDisconnected ? 40 : 0,
+            color: _connectionStatus == ConnectionStatus.reconnecting 
+                ? Colors.amber 
+                : (_connectionStatus == ConnectionStatus.connected && _hasDisconnected) 
+                    ? Colors.green 
+                    : Colors.transparent,
+            child: _hasDisconnected
+                ? Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (_connectionStatus == ConnectionStatus.reconnecting)
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        if (_connectionStatus == ConnectionStatus.reconnecting)
+                          const SizedBox(width: 8),
+                        Text(
+                          _connectionStatus == ConnectionStatus.reconnecting
+                              ? 'Reconnecting...'
+                              : 'Connected',
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  )
+                : null,
+          ),
           // Messages list
           Expanded(
             child: chatState.isLoading
@@ -156,9 +257,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     : ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.all(16),
-                        itemCount: chatState.messages.length,
+                        itemCount: chatState.messages.length + (chatState.isLoadingMore ? 1 : 0),
                         itemBuilder: (context, index) {
-                          final message = chatState.messages[index];
+                          if (index == 0 && chatState.isLoadingMore) {
+                            return const Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
+                          final messageIndex = chatState.isLoadingMore ? index - 1 : index;
+                          final message = chatState.messages[messageIndex];
                           final isMe = message.senderId == currentUser?.id;
                           return _MessageBubble(
                             message: message,
@@ -292,6 +400,110 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             child: const Text('Got it'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showUnfriendConfirmation(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Unfriend this user?',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'You will no longer be able to message each other.',
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await ref.read(friendsProvider.notifier).removeFriend(widget.otherUserId);
+                      if (context.mounted) {
+                        context.go(RoutePaths.home);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    child: const Text('Unfriend'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showBlockConfirmation(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Block this user?',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'You will no longer be able to message each other or see their messages.',
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await ref.read(friendsProvider.notifier).blockUser(widget.otherUserId);
+                      if (context.mounted) {
+                        context.go(RoutePaths.home);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    child: const Text('Block'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }

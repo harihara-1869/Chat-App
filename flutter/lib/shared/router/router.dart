@@ -12,6 +12,8 @@ import '../../features/home/screens/home_screen.dart';
 import '../../features/chat/screens/chat_screen.dart';
 import '../../features/friends/screens/friends_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
+import '../../features/settings/backup_screen.dart';
+import '../../features/settings/recovery_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 
 /// Router provider
@@ -98,6 +100,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.settings,
         name: RouteNames.settings,
         builder: (context, state) => const SettingsScreen(),
+        routes: [
+          GoRoute(
+            path: 'backup',
+            builder: (context, state) => const BackupScreen(),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/recovery',
+        builder: (context, state) => const RecoveryScreen(),
       ),
       GoRoute(
         path: RoutePaths.profile,

@@ -102,6 +102,34 @@ class DeviceRegistrationService {
     );
   }
 
+  /// Check prekey count and refill if below threshold
+  /// Called after login and after prekey session creation
+  Future<bool> checkAndRefillPreKeys() async {
+    try {
+      final count = await _keyRepository.getPreKeyCount();
+      
+      if (count >= 10) {
+        return true; // Sufficient keys
+      }
+      
+      // Need to refill - generate new keys
+      await replenishOneTimePreKeys();
+      return true;
+    } catch (e) {
+      // First retry
+      try {
+        await Future.delayed(const Duration(seconds: 1));
+        final count = await _keyRepository.getPreKeyCount();
+        if (count >= 10) return true;
+        await replenishOneTimePreKeys();
+        return true;
+      } catch (retryError) {
+        // Failed twice - surface non-blocking warning
+        return false;
+      }
+    }
+  }
+
   Future<void> replenishOneTimePreKeys() async {
     final count = await _keyRepository.getPreKeyCount();
     if (count >= _minOneTimePreKeys) {

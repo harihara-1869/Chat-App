@@ -80,4 +80,13 @@ class FriendRepository {
       rethrow;
     }
   }
+
+  /// Block a user
+  Future<void> blockUser(String userId) async {
+    try {
+      await _apiClient.post('${ApiConstants.friend}/block/$userId');
+    } on ServerException {
+      rethrow;
+    }
+  }
 }

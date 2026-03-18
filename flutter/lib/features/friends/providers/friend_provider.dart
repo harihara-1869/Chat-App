@@ -137,6 +137,18 @@ class FriendsNotifier extends StateNotifier<FriendsState> {
     }
   }
 
+  Future<void> blockUser(String userId) async {
+    try {
+      await _friendRepository.blockUser(userId);
+      state = state.copyWith(
+        friends: state.friends.where((f) => f.id != userId).toList(),
+        pendingRequests: state.pendingRequests.where((r) => r.senderId != userId).toList(),
+      );
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
+
   Future<void> refresh() async {
     await _loadFriends();
   }

@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../models/friend.dart';
 import '../providers/friend_provider.dart';
 
 class FriendsScreen extends ConsumerStatefulWidget {
@@ -14,6 +18,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _searchController = TextEditingController();
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -25,7 +30,15 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
   void dispose() {
     _tabController.dispose();
     _searchController.dispose();
+    _debounce?.cancel();
     super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      ref.read(searchProvider.notifier).search(value);
+    });
   }
 
   @override
@@ -112,16 +125,64 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                 color: friend.isOnline ? Colors.green : Colors.grey,
               ),
             ),
-            trailing: friend.isOnline
-                ? Container(
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (friend.isOnline)
+                  Container(
                     width: 12,
                     height: 12,
                     decoration: const BoxDecoration(
                       color: Colors.green,
                       shape: BoxShape.circle,
                     ),
-                  )
-                : null,
+                  ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (value) {
+                    if (value == 'unfriend') {
+                      _showUnfriendConfirmation(context, friend);
+                    } else if (value == 'block') {
+                      _showBlockConfirmation(context, friend);
+                    } else if (value == 'chat') {
+                      context.push('/home/chat/${friend.id}');
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'chat',
+                      child: Row(
+                        children: [
+                          Icon(Icons.chat),
+                          SizedBox(width: 8),
+                          Text('Chat'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'unfriend',
+                      child: Row(
+                        children: [
+                          Icon(Icons.person_remove, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('Unfriend'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'block',
+                      child: Row(
+                        children: [
+                          Icon(Icons.block, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('Block'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
             onTap: () {
               // Navigate to chat
             },
@@ -154,7 +215,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                   : null,
             ),
             onChanged: (value) {
-              ref.read(searchProvider.notifier).search(value);
+              _onSearchChanged(value);
             },
           ),
         ),
@@ -216,6 +277,104 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
         ref.read(friendsProvider.notifier).sendFriendRequest(user.id);
       },
       child: const Text('Add'),
+    );
+  }
+
+  void _showUnfriendConfirmation(BuildContext context, Friend friend) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Unfriend ${friend.username}?',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'You will no longer be able to message each other.',
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await ref.read(friendsProvider.notifier).removeFriend(friend.id);
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    child: const Text('Unfriend'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showBlockConfirmation(BuildContext context, Friend friend) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Block ${friend.username}?',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'You will no longer be able to message each other or see their messages.',
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await ref.read(friendsProvider.notifier).blockUser(friend.id);
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    child: const Text('Block'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
     );
   }
 }

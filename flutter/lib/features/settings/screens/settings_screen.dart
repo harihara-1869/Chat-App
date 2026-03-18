@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../profile/providers/profile_provider.dart';
 import '../../profile/repositories/profile_repository.dart';
+import '../../../core/constants/constants.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -100,6 +102,27 @@ class SettingsScreen extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               // TODO: Navigate to 2FA setup
+            },
+          ),
+          const Divider(),
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              'Chat Backup & Recovery',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF6366F1),
+              ),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.backup_outlined),
+            title: const Text('Chat backup'),
+            subtitle: const Text('View or save your recovery phrase'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              context.push('/settings/backup');
             },
           ),
           const Divider(),

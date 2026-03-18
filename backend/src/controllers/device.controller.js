@@ -134,3 +134,30 @@ export const getMyDevice = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+/**
+ * Save or update FCM push notification token.
+ */
+export const saveFcmToken = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { token } = req.body;
+
+        if (!token) {
+            return res.status(400).json({ message: "FCM token is required" });
+        }
+
+        const device = await Device.findOne({ userId });
+        if (!device) {
+            return res.status(404).json({ message: "No device registered. Register device first." });
+        }
+
+        device.fcmToken = token;
+        await device.save();
+
+        res.status(200).json({ message: "FCM token saved successfully" });
+    } catch (error) {
+        console.error("Error in saveFcmToken:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../network/api_client.dart';
@@ -6,6 +8,7 @@ import '../storage/database/database_provider.dart';
 import '../storage/signal_store_bundle.dart';
 import '../storage/message_store.dart';
 import '../signal/signal_service.dart';
+import '../services/device_registration_service.dart';
 import '../../features/messaging/repositories/key_repository.dart';
 import '../../features/messaging/models/message.dart';
 
@@ -15,6 +18,7 @@ class EncryptedMessagingService {
   final MessageStore _messageStore;
   final ApiClient _apiClient;
   final AppDatabase _db;
+  final DeviceRegistrationService? _deviceRegistrationService;
 
   EncryptedMessagingService({
     required SignalService signalService,
@@ -22,11 +26,13 @@ class EncryptedMessagingService {
     required MessageStore messageStore,
     required ApiClient apiClient,
     required AppDatabase db,
+    DeviceRegistrationService? deviceRegistrationService,
   })  : _signalService = signalService,
         _keyRepository = keyRepository,
         _messageStore = messageStore,
         _apiClient = apiClient,
-        _db = db;
+        _db = db,
+        _deviceRegistrationService = deviceRegistrationService;
 
   Future<void> initialize() async {
     await _signalService.initialize();
@@ -70,6 +76,11 @@ class EncryptedMessagingService {
       'signedPreKeySignature': bundle['signedPreKey']['signature'],
       'identityKey': bundle['identityKey'],
     });
+
+    // Fire-and-forget: replenish OneTimePreKeys after consuming one
+    if (_deviceRegistrationService != null) {
+      unawaited(_deviceRegistrationService.checkAndRefillPreKeys());
+    }
   }
 
   Future<Map<String, dynamic>> sendMessage({
@@ -176,6 +187,7 @@ final encryptedMessagingServiceProvider = Provider<EncryptedMessagingService>((r
   final keyRepository = ref.watch(keyRepositoryProvider);
   final messageStore = ref.watch(messageStoreProvider).value;
   final db = ref.watch(appDatabaseProvider).value;
+  final deviceRegistrationService = ref.watch(deviceRegistrationServiceProvider);
   
   if (messageStore == null || db == null) {
     throw StateError('Database not initialized');
@@ -187,6 +199,7 @@ final encryptedMessagingServiceProvider = Provider<EncryptedMessagingService>((r
     messageStore: messageStore,
     apiClient: ApiClient(),
     db: db,
+    deviceRegistrationService: deviceRegistrationService,
   );
 });
 
@@ -195,6 +208,7 @@ final encryptedMessagingServiceAsyncProvider = FutureProvider<EncryptedMessaging
   final keyRepository = ref.watch(keyRepositoryProvider);
   final messageStore = await ref.watch(messageStoreProvider.future);
   final db = await ref.watch(appDatabaseProvider.future);
+  final deviceRegistrationService = ref.watch(deviceRegistrationServiceProvider);
 
   return EncryptedMessagingService(
     signalService: signalService,
@@ -202,5 +216,6 @@ final encryptedMessagingServiceAsyncProvider = FutureProvider<EncryptedMessaging
     messageStore: messageStore,
     apiClient: ApiClient(),
     db: db,
+    deviceRegistrationService: deviceRegistrationService,
   );
 });

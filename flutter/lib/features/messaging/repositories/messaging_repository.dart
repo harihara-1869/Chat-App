@@ -5,6 +5,16 @@ import '../../../core/errors/exceptions.dart';
 import '../../../core/network/api_client.dart';
 import '../models/message.dart';
 
+class MessagesPage {
+  final List<Message> messages;
+  final bool hasMore;
+
+  const MessagesPage({
+    required this.messages,
+    required this.hasMore,
+  });
+}
+
 /// Repository for messaging operations
 class MessagingRepository {
   final ApiClient _apiClient;
@@ -12,14 +22,25 @@ class MessagingRepository {
   MessagingRepository({required ApiClient apiClient}) : _apiClient = apiClient;
 
   /// Get messages between current user and another user
-  Future<List<Message>> getMessages(String userId) async {
+  Future<MessagesPage> getMessages(String userId, {int limit = 30, String? before}) async {
     try {
+      final queryParams = <String, dynamic>{
+        'limit': limit,
+      };
+      if (before != null) {
+        queryParams['before'] = before;
+      }
+
       final response = await _apiClient.get(
         '${ApiConstants.message}/$userId',
+        queryParameters: queryParams,
       );
 
       final List<dynamic> data = response.data;
-      return data.map((json) => Message.fromJson(json)).toList();
+      final messages = data.map((json) => Message.fromJson(json)).toList();
+      final hasMore = messages.length >= limit;
+
+      return MessagesPage(messages: messages, hasMore: hasMore);
     } on ServerException {
       rethrow;
     }

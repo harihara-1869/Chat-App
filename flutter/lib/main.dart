@@ -1,12 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'features/features.dart';
 import 'features/profile/providers/profile_provider.dart';
 import 'shared/router/router.dart';
+import 'core/services/push_notification_service.dart';
 
-void main() {
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Handle background FCM messages
+  if (message.data.isNotEmpty) {
+    // Handle the message data - this runs in an isolate
+    debugPrint('Background message: ${message.data}');
+  }
+}
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp();
+
+  // Initialize push notification service
+  await PushNotificationService.initialize();
+
+  // Register background handler
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   runApp(
     const ProviderScope(
