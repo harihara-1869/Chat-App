@@ -4,7 +4,6 @@ import 'package:cookie_jar/cookie_jar.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import '../constants/constants.dart';
-import '../errors/exceptions.dart';
 
 enum ConnectionStatus {
   connected,
@@ -134,6 +133,11 @@ class SocketService {
   /// Leave a chat room
   void leaveChat(String conversationId) {
     _socket?.emit('leaveChat', {'conversationId': conversationId});
+  }
+
+  /// Emit an incoming message from push notification (bypasses socket)
+  void emitIncomingMessage(Map<String, dynamic> messageData) {
+    _messageController.add(messageData);
   }
 
   void _setupListeners() {

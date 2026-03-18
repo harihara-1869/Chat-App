@@ -40,12 +40,12 @@ class SignalStoreBundle {
   }
 }
 
-final signalStoreBundleProvider = Provider<SignalStoreBundle>((ref) {
-  final sessionStore = ref.watch(driftSessionStoreProvider);
-  final identityKeyStore = ref.watch(driftIdentityKeyStoreProvider);
-  final preKeyStore = ref.watch(driftPreKeyStoreProvider);
-  final signedPreKeyStore = ref.watch(driftSignedPreKeyStoreProvider);
-  final kyberPreKeyStore = ref.watch(driftKyberPreKeyStoreProvider);
+final signalStoreBundleProvider = FutureProvider<SignalStoreBundle>((ref) async {
+  final sessionStore = await ref.watch(driftSessionStoreProvider.future);
+  final identityKeyStore = await ref.watch(driftIdentityKeyStoreProvider.future);
+  final preKeyStore = await ref.watch(driftPreKeyStoreProvider.future);
+  final signedPreKeyStore = await ref.watch(driftSignedPreKeyStoreProvider.future);
+  final kyberPreKeyStore = await ref.watch(driftKyberPreKeyStoreProvider.future);
 
   return SignalStoreBundle(
     sessionStore: sessionStore,

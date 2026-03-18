@@ -15,6 +15,7 @@ import userRoutes from './routes/user.route.js';
 import privacyRoutes from './routes/privacy.route.js';
 import keyRoutes from './routes/keys.route.js';
 import deviceRoutes from './routes/device.route.js';
+import attachmentRoutes from './routes/attachment.route.js';
 import { flagOldSignedPreKeysForRotation } from './controllers/key.controller.js';
 import cron from 'node-cron';
 dotenv.config();
@@ -53,6 +54,7 @@ app.use("/api", requirePrivacyPolicy);
 
 app.use("/api/auth", authRoutes)
 app.use("/api/devices", deviceRoutes)
+app.use("/api/attachments", attachmentRoutes)
 app.use("/api/keys", keyRoutes)
 app.use("/api/privacy-policy", privacyRoutes)
 app.use("/api/message", messageRoutes)

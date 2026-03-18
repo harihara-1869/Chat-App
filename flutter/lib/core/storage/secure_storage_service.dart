@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../constants/constants.dart';
-import '../errors/exceptions.dart';
 
 /// Secure storage service for sensitive data (E2EE keys)
 /// Keys are NEVER sent to the server - they stay local only

@@ -2395,112 +2395,22 @@ typedef $$SessionsTableUpdateCompanionBuilder = SessionsCompanion Function({
   Value<int> lastUpdated,
 });
 
-class $$SessionsTableFilterComposer
-    extends Composer<_$AppDatabase, $SessionsTable> {
-  $$SessionsTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get addressName => $composableBuilder(
-      column: $table.addressName, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get deviceId => $composableBuilder(
-      column: $table.deviceId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<Uint8List> get record => $composableBuilder(
-      column: $table.record, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get lastUpdated => $composableBuilder(
-      column: $table.lastUpdated, builder: (column) => ColumnFilters(column));
-}
-
-class $$SessionsTableOrderingComposer
-    extends Composer<_$AppDatabase, $SessionsTable> {
-  $$SessionsTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get addressName => $composableBuilder(
-      column: $table.addressName, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get deviceId => $composableBuilder(
-      column: $table.deviceId, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<Uint8List> get record => $composableBuilder(
-      column: $table.record, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get lastUpdated => $composableBuilder(
-      column: $table.lastUpdated, builder: (column) => ColumnOrderings(column));
-}
-
-class $$SessionsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $SessionsTable> {
-  $$SessionsTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get addressName => $composableBuilder(
-      column: $table.addressName, builder: (column) => column);
-
-  GeneratedColumn<int> get deviceId =>
-      $composableBuilder(column: $table.deviceId, builder: (column) => column);
-
-  GeneratedColumn<Uint8List> get record =>
-      $composableBuilder(column: $table.record, builder: (column) => column);
-
-  GeneratedColumn<int> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  GeneratedColumn<int> get lastUpdated => $composableBuilder(
-      column: $table.lastUpdated, builder: (column) => column);
-}
-
 class $$SessionsTableTableManager extends RootTableManager<
     _$AppDatabase,
     $SessionsTable,
     Session,
     $$SessionsTableFilterComposer,
     $$SessionsTableOrderingComposer,
-    $$SessionsTableAnnotationComposer,
     $$SessionsTableCreateCompanionBuilder,
-    $$SessionsTableUpdateCompanionBuilder,
-    (Session, BaseReferences<_$AppDatabase, $SessionsTable, Session>),
-    Session,
-    PrefetchHooks Function()> {
+    $$SessionsTableUpdateCompanionBuilder> {
   $$SessionsTableTableManager(_$AppDatabase db, $SessionsTable table)
       : super(TableManagerState(
           db: db,
           table: table,
-          createFilteringComposer: () =>
-              $$SessionsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$SessionsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$SessionsTableAnnotationComposer($db: db, $table: table),
+          filteringComposer:
+              $$SessionsTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$SessionsTableOrderingComposer(ComposerState(db, table)),
           updateCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<String> addressName = const Value.absent(),
@@ -2533,25 +2443,77 @@ class $$SessionsTableTableManager extends RootTableManager<
             createdAt: createdAt,
             lastUpdated: lastUpdated,
           ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
         ));
 }
 
-typedef $$SessionsTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $SessionsTable,
-    Session,
-    $$SessionsTableFilterComposer,
-    $$SessionsTableOrderingComposer,
-    $$SessionsTableAnnotationComposer,
-    $$SessionsTableCreateCompanionBuilder,
-    $$SessionsTableUpdateCompanionBuilder,
-    (Session, BaseReferences<_$AppDatabase, $SessionsTable, Session>),
-    Session,
-    PrefetchHooks Function()>;
+class $$SessionsTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $SessionsTable> {
+  $$SessionsTableFilterComposer(super.$state);
+  ColumnFilters<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get addressName => $state.composableBuilder(
+      column: $state.table.addressName,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get deviceId => $state.composableBuilder(
+      column: $state.table.deviceId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<Uint8List> get record => $state.composableBuilder(
+      column: $state.table.record,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get lastUpdated => $state.composableBuilder(
+      column: $state.table.lastUpdated,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$SessionsTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $SessionsTable> {
+  $$SessionsTableOrderingComposer(super.$state);
+  ColumnOrderings<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get addressName => $state.composableBuilder(
+      column: $state.table.addressName,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get deviceId => $state.composableBuilder(
+      column: $state.table.deviceId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<Uint8List> get record => $state.composableBuilder(
+      column: $state.table.record,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get lastUpdated => $state.composableBuilder(
+      column: $state.table.lastUpdated,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
 typedef $$IdentityKeysTableCreateCompanionBuilder = IdentityKeysCompanion
     Function({
   Value<int> id,
@@ -2569,106 +2531,22 @@ typedef $$IdentityKeysTableUpdateCompanionBuilder = IdentityKeysCompanion
   Value<int> createdAt,
 });
 
-class $$IdentityKeysTableFilterComposer
-    extends Composer<_$AppDatabase, $IdentityKeysTable> {
-  $$IdentityKeysTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get addressName => $composableBuilder(
-      column: $table.addressName, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get deviceId => $composableBuilder(
-      column: $table.deviceId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<Uint8List> get identityKey => $composableBuilder(
-      column: $table.identityKey, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
-}
-
-class $$IdentityKeysTableOrderingComposer
-    extends Composer<_$AppDatabase, $IdentityKeysTable> {
-  $$IdentityKeysTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get addressName => $composableBuilder(
-      column: $table.addressName, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get deviceId => $composableBuilder(
-      column: $table.deviceId, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<Uint8List> get identityKey => $composableBuilder(
-      column: $table.identityKey, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
-}
-
-class $$IdentityKeysTableAnnotationComposer
-    extends Composer<_$AppDatabase, $IdentityKeysTable> {
-  $$IdentityKeysTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get addressName => $composableBuilder(
-      column: $table.addressName, builder: (column) => column);
-
-  GeneratedColumn<int> get deviceId =>
-      $composableBuilder(column: $table.deviceId, builder: (column) => column);
-
-  GeneratedColumn<Uint8List> get identityKey => $composableBuilder(
-      column: $table.identityKey, builder: (column) => column);
-
-  GeneratedColumn<int> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-}
-
 class $$IdentityKeysTableTableManager extends RootTableManager<
     _$AppDatabase,
     $IdentityKeysTable,
     IdentityKey,
     $$IdentityKeysTableFilterComposer,
     $$IdentityKeysTableOrderingComposer,
-    $$IdentityKeysTableAnnotationComposer,
     $$IdentityKeysTableCreateCompanionBuilder,
-    $$IdentityKeysTableUpdateCompanionBuilder,
-    (
-      IdentityKey,
-      BaseReferences<_$AppDatabase, $IdentityKeysTable, IdentityKey>
-    ),
-    IdentityKey,
-    PrefetchHooks Function()> {
+    $$IdentityKeysTableUpdateCompanionBuilder> {
   $$IdentityKeysTableTableManager(_$AppDatabase db, $IdentityKeysTable table)
       : super(TableManagerState(
           db: db,
           table: table,
-          createFilteringComposer: () =>
-              $$IdentityKeysTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$IdentityKeysTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$IdentityKeysTableAnnotationComposer($db: db, $table: table),
+          filteringComposer:
+              $$IdentityKeysTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$IdentityKeysTableOrderingComposer(ComposerState(db, table)),
           updateCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<String> addressName = const Value.absent(),
@@ -2697,28 +2575,67 @@ class $$IdentityKeysTableTableManager extends RootTableManager<
             identityKey: identityKey,
             createdAt: createdAt,
           ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
         ));
 }
 
-typedef $$IdentityKeysTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $IdentityKeysTable,
-    IdentityKey,
-    $$IdentityKeysTableFilterComposer,
-    $$IdentityKeysTableOrderingComposer,
-    $$IdentityKeysTableAnnotationComposer,
-    $$IdentityKeysTableCreateCompanionBuilder,
-    $$IdentityKeysTableUpdateCompanionBuilder,
-    (
-      IdentityKey,
-      BaseReferences<_$AppDatabase, $IdentityKeysTable, IdentityKey>
-    ),
-    IdentityKey,
-    PrefetchHooks Function()>;
+class $$IdentityKeysTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $IdentityKeysTable> {
+  $$IdentityKeysTableFilterComposer(super.$state);
+  ColumnFilters<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get addressName => $state.composableBuilder(
+      column: $state.table.addressName,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get deviceId => $state.composableBuilder(
+      column: $state.table.deviceId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<Uint8List> get identityKey => $state.composableBuilder(
+      column: $state.table.identityKey,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$IdentityKeysTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $IdentityKeysTable> {
+  $$IdentityKeysTableOrderingComposer(super.$state);
+  ColumnOrderings<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get addressName => $state.composableBuilder(
+      column: $state.table.addressName,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get deviceId => $state.composableBuilder(
+      column: $state.table.deviceId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<Uint8List> get identityKey => $state.composableBuilder(
+      column: $state.table.identityKey,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
 typedef $$PreKeysTableCreateCompanionBuilder = PreKeysCompanion Function({
   Value<int> id,
   required int preKeyId,
@@ -2732,94 +2649,22 @@ typedef $$PreKeysTableUpdateCompanionBuilder = PreKeysCompanion Function({
   Value<int> createdAt,
 });
 
-class $$PreKeysTableFilterComposer
-    extends Composer<_$AppDatabase, $PreKeysTable> {
-  $$PreKeysTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get preKeyId => $composableBuilder(
-      column: $table.preKeyId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<Uint8List> get record => $composableBuilder(
-      column: $table.record, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
-}
-
-class $$PreKeysTableOrderingComposer
-    extends Composer<_$AppDatabase, $PreKeysTable> {
-  $$PreKeysTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get preKeyId => $composableBuilder(
-      column: $table.preKeyId, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<Uint8List> get record => $composableBuilder(
-      column: $table.record, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
-}
-
-class $$PreKeysTableAnnotationComposer
-    extends Composer<_$AppDatabase, $PreKeysTable> {
-  $$PreKeysTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<int> get preKeyId =>
-      $composableBuilder(column: $table.preKeyId, builder: (column) => column);
-
-  GeneratedColumn<Uint8List> get record =>
-      $composableBuilder(column: $table.record, builder: (column) => column);
-
-  GeneratedColumn<int> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-}
-
 class $$PreKeysTableTableManager extends RootTableManager<
     _$AppDatabase,
     $PreKeysTable,
     PreKey,
     $$PreKeysTableFilterComposer,
     $$PreKeysTableOrderingComposer,
-    $$PreKeysTableAnnotationComposer,
     $$PreKeysTableCreateCompanionBuilder,
-    $$PreKeysTableUpdateCompanionBuilder,
-    (PreKey, BaseReferences<_$AppDatabase, $PreKeysTable, PreKey>),
-    PreKey,
-    PrefetchHooks Function()> {
+    $$PreKeysTableUpdateCompanionBuilder> {
   $$PreKeysTableTableManager(_$AppDatabase db, $PreKeysTable table)
       : super(TableManagerState(
           db: db,
           table: table,
-          createFilteringComposer: () =>
-              $$PreKeysTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$PreKeysTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$PreKeysTableAnnotationComposer($db: db, $table: table),
+          filteringComposer:
+              $$PreKeysTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$PreKeysTableOrderingComposer(ComposerState(db, table)),
           updateCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<int> preKeyId = const Value.absent(),
@@ -2844,25 +2689,57 @@ class $$PreKeysTableTableManager extends RootTableManager<
             record: record,
             createdAt: createdAt,
           ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
         ));
 }
 
-typedef $$PreKeysTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $PreKeysTable,
-    PreKey,
-    $$PreKeysTableFilterComposer,
-    $$PreKeysTableOrderingComposer,
-    $$PreKeysTableAnnotationComposer,
-    $$PreKeysTableCreateCompanionBuilder,
-    $$PreKeysTableUpdateCompanionBuilder,
-    (PreKey, BaseReferences<_$AppDatabase, $PreKeysTable, PreKey>),
-    PreKey,
-    PrefetchHooks Function()>;
+class $$PreKeysTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $PreKeysTable> {
+  $$PreKeysTableFilterComposer(super.$state);
+  ColumnFilters<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get preKeyId => $state.composableBuilder(
+      column: $state.table.preKeyId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<Uint8List> get record => $state.composableBuilder(
+      column: $state.table.record,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$PreKeysTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $PreKeysTable> {
+  $$PreKeysTableOrderingComposer(super.$state);
+  ColumnOrderings<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get preKeyId => $state.composableBuilder(
+      column: $state.table.preKeyId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<Uint8List> get record => $state.composableBuilder(
+      column: $state.table.record,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
 typedef $$SignedPreKeysTableCreateCompanionBuilder = SignedPreKeysCompanion
     Function({
   Value<int> id,
@@ -2878,99 +2755,22 @@ typedef $$SignedPreKeysTableUpdateCompanionBuilder = SignedPreKeysCompanion
   Value<int> createdAt,
 });
 
-class $$SignedPreKeysTableFilterComposer
-    extends Composer<_$AppDatabase, $SignedPreKeysTable> {
-  $$SignedPreKeysTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get signedPreKeyId => $composableBuilder(
-      column: $table.signedPreKeyId,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<Uint8List> get record => $composableBuilder(
-      column: $table.record, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
-}
-
-class $$SignedPreKeysTableOrderingComposer
-    extends Composer<_$AppDatabase, $SignedPreKeysTable> {
-  $$SignedPreKeysTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get signedPreKeyId => $composableBuilder(
-      column: $table.signedPreKeyId,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<Uint8List> get record => $composableBuilder(
-      column: $table.record, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
-}
-
-class $$SignedPreKeysTableAnnotationComposer
-    extends Composer<_$AppDatabase, $SignedPreKeysTable> {
-  $$SignedPreKeysTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<int> get signedPreKeyId => $composableBuilder(
-      column: $table.signedPreKeyId, builder: (column) => column);
-
-  GeneratedColumn<Uint8List> get record =>
-      $composableBuilder(column: $table.record, builder: (column) => column);
-
-  GeneratedColumn<int> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-}
-
 class $$SignedPreKeysTableTableManager extends RootTableManager<
     _$AppDatabase,
     $SignedPreKeysTable,
     SignedPreKey,
     $$SignedPreKeysTableFilterComposer,
     $$SignedPreKeysTableOrderingComposer,
-    $$SignedPreKeysTableAnnotationComposer,
     $$SignedPreKeysTableCreateCompanionBuilder,
-    $$SignedPreKeysTableUpdateCompanionBuilder,
-    (
-      SignedPreKey,
-      BaseReferences<_$AppDatabase, $SignedPreKeysTable, SignedPreKey>
-    ),
-    SignedPreKey,
-    PrefetchHooks Function()> {
+    $$SignedPreKeysTableUpdateCompanionBuilder> {
   $$SignedPreKeysTableTableManager(_$AppDatabase db, $SignedPreKeysTable table)
       : super(TableManagerState(
           db: db,
           table: table,
-          createFilteringComposer: () =>
-              $$SignedPreKeysTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$SignedPreKeysTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$SignedPreKeysTableAnnotationComposer($db: db, $table: table),
+          filteringComposer:
+              $$SignedPreKeysTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$SignedPreKeysTableOrderingComposer(ComposerState(db, table)),
           updateCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<int> signedPreKeyId = const Value.absent(),
@@ -2995,28 +2795,57 @@ class $$SignedPreKeysTableTableManager extends RootTableManager<
             record: record,
             createdAt: createdAt,
           ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
         ));
 }
 
-typedef $$SignedPreKeysTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $SignedPreKeysTable,
-    SignedPreKey,
-    $$SignedPreKeysTableFilterComposer,
-    $$SignedPreKeysTableOrderingComposer,
-    $$SignedPreKeysTableAnnotationComposer,
-    $$SignedPreKeysTableCreateCompanionBuilder,
-    $$SignedPreKeysTableUpdateCompanionBuilder,
-    (
-      SignedPreKey,
-      BaseReferences<_$AppDatabase, $SignedPreKeysTable, SignedPreKey>
-    ),
-    SignedPreKey,
-    PrefetchHooks Function()>;
+class $$SignedPreKeysTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $SignedPreKeysTable> {
+  $$SignedPreKeysTableFilterComposer(super.$state);
+  ColumnFilters<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get signedPreKeyId => $state.composableBuilder(
+      column: $state.table.signedPreKeyId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<Uint8List> get record => $state.composableBuilder(
+      column: $state.table.record,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$SignedPreKeysTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $SignedPreKeysTable> {
+  $$SignedPreKeysTableOrderingComposer(super.$state);
+  ColumnOrderings<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get signedPreKeyId => $state.composableBuilder(
+      column: $state.table.signedPreKeyId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<Uint8List> get record => $state.composableBuilder(
+      column: $state.table.record,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
 typedef $$KyberPreKeysTableCreateCompanionBuilder = KyberPreKeysCompanion
     Function({
   Value<int> id,
@@ -3034,107 +2863,22 @@ typedef $$KyberPreKeysTableUpdateCompanionBuilder = KyberPreKeysCompanion
   Value<int> createdAt,
 });
 
-class $$KyberPreKeysTableFilterComposer
-    extends Composer<_$AppDatabase, $KyberPreKeysTable> {
-  $$KyberPreKeysTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get kyberPreKeyId => $composableBuilder(
-      column: $table.kyberPreKeyId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<Uint8List> get record => $composableBuilder(
-      column: $table.record, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<bool> get isUsed => $composableBuilder(
-      column: $table.isUsed, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
-}
-
-class $$KyberPreKeysTableOrderingComposer
-    extends Composer<_$AppDatabase, $KyberPreKeysTable> {
-  $$KyberPreKeysTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get kyberPreKeyId => $composableBuilder(
-      column: $table.kyberPreKeyId,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<Uint8List> get record => $composableBuilder(
-      column: $table.record, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<bool> get isUsed => $composableBuilder(
-      column: $table.isUsed, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
-}
-
-class $$KyberPreKeysTableAnnotationComposer
-    extends Composer<_$AppDatabase, $KyberPreKeysTable> {
-  $$KyberPreKeysTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<int> get kyberPreKeyId => $composableBuilder(
-      column: $table.kyberPreKeyId, builder: (column) => column);
-
-  GeneratedColumn<Uint8List> get record =>
-      $composableBuilder(column: $table.record, builder: (column) => column);
-
-  GeneratedColumn<bool> get isUsed =>
-      $composableBuilder(column: $table.isUsed, builder: (column) => column);
-
-  GeneratedColumn<int> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-}
-
 class $$KyberPreKeysTableTableManager extends RootTableManager<
     _$AppDatabase,
     $KyberPreKeysTable,
     KyberPreKey,
     $$KyberPreKeysTableFilterComposer,
     $$KyberPreKeysTableOrderingComposer,
-    $$KyberPreKeysTableAnnotationComposer,
     $$KyberPreKeysTableCreateCompanionBuilder,
-    $$KyberPreKeysTableUpdateCompanionBuilder,
-    (
-      KyberPreKey,
-      BaseReferences<_$AppDatabase, $KyberPreKeysTable, KyberPreKey>
-    ),
-    KyberPreKey,
-    PrefetchHooks Function()> {
+    $$KyberPreKeysTableUpdateCompanionBuilder> {
   $$KyberPreKeysTableTableManager(_$AppDatabase db, $KyberPreKeysTable table)
       : super(TableManagerState(
           db: db,
           table: table,
-          createFilteringComposer: () =>
-              $$KyberPreKeysTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$KyberPreKeysTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$KyberPreKeysTableAnnotationComposer($db: db, $table: table),
+          filteringComposer:
+              $$KyberPreKeysTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$KyberPreKeysTableOrderingComposer(ComposerState(db, table)),
           updateCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<int> kyberPreKeyId = const Value.absent(),
@@ -3163,28 +2907,67 @@ class $$KyberPreKeysTableTableManager extends RootTableManager<
             isUsed: isUsed,
             createdAt: createdAt,
           ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
         ));
 }
 
-typedef $$KyberPreKeysTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $KyberPreKeysTable,
-    KyberPreKey,
-    $$KyberPreKeysTableFilterComposer,
-    $$KyberPreKeysTableOrderingComposer,
-    $$KyberPreKeysTableAnnotationComposer,
-    $$KyberPreKeysTableCreateCompanionBuilder,
-    $$KyberPreKeysTableUpdateCompanionBuilder,
-    (
-      KyberPreKey,
-      BaseReferences<_$AppDatabase, $KyberPreKeysTable, KyberPreKey>
-    ),
-    KyberPreKey,
-    PrefetchHooks Function()>;
+class $$KyberPreKeysTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $KyberPreKeysTable> {
+  $$KyberPreKeysTableFilterComposer(super.$state);
+  ColumnFilters<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get kyberPreKeyId => $state.composableBuilder(
+      column: $state.table.kyberPreKeyId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<Uint8List> get record => $state.composableBuilder(
+      column: $state.table.record,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<bool> get isUsed => $state.composableBuilder(
+      column: $state.table.isUsed,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$KyberPreKeysTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $KyberPreKeysTable> {
+  $$KyberPreKeysTableOrderingComposer(super.$state);
+  ColumnOrderings<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get kyberPreKeyId => $state.composableBuilder(
+      column: $state.table.kyberPreKeyId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<Uint8List> get record => $state.composableBuilder(
+      column: $state.table.record,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<bool> get isUsed => $state.composableBuilder(
+      column: $state.table.isUsed,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
 typedef $$SkippedMessageKeysTableCreateCompanionBuilder
     = SkippedMessageKeysCompanion Function({
   Value<int> id,
@@ -3204,118 +2987,23 @@ typedef $$SkippedMessageKeysTableUpdateCompanionBuilder
   Value<int> storedAt,
 });
 
-class $$SkippedMessageKeysTableFilterComposer
-    extends Composer<_$AppDatabase, $SkippedMessageKeysTable> {
-  $$SkippedMessageKeysTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get senderId => $composableBuilder(
-      column: $table.senderId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<Uint8List> get ratchetKey => $composableBuilder(
-      column: $table.ratchetKey, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get messageIndex => $composableBuilder(
-      column: $table.messageIndex, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<Uint8List> get messageKey => $composableBuilder(
-      column: $table.messageKey, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get storedAt => $composableBuilder(
-      column: $table.storedAt, builder: (column) => ColumnFilters(column));
-}
-
-class $$SkippedMessageKeysTableOrderingComposer
-    extends Composer<_$AppDatabase, $SkippedMessageKeysTable> {
-  $$SkippedMessageKeysTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get senderId => $composableBuilder(
-      column: $table.senderId, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<Uint8List> get ratchetKey => $composableBuilder(
-      column: $table.ratchetKey, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get messageIndex => $composableBuilder(
-      column: $table.messageIndex,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<Uint8List> get messageKey => $composableBuilder(
-      column: $table.messageKey, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get storedAt => $composableBuilder(
-      column: $table.storedAt, builder: (column) => ColumnOrderings(column));
-}
-
-class $$SkippedMessageKeysTableAnnotationComposer
-    extends Composer<_$AppDatabase, $SkippedMessageKeysTable> {
-  $$SkippedMessageKeysTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get senderId =>
-      $composableBuilder(column: $table.senderId, builder: (column) => column);
-
-  GeneratedColumn<Uint8List> get ratchetKey => $composableBuilder(
-      column: $table.ratchetKey, builder: (column) => column);
-
-  GeneratedColumn<int> get messageIndex => $composableBuilder(
-      column: $table.messageIndex, builder: (column) => column);
-
-  GeneratedColumn<Uint8List> get messageKey => $composableBuilder(
-      column: $table.messageKey, builder: (column) => column);
-
-  GeneratedColumn<int> get storedAt =>
-      $composableBuilder(column: $table.storedAt, builder: (column) => column);
-}
-
 class $$SkippedMessageKeysTableTableManager extends RootTableManager<
     _$AppDatabase,
     $SkippedMessageKeysTable,
     SkippedMessageKey,
     $$SkippedMessageKeysTableFilterComposer,
     $$SkippedMessageKeysTableOrderingComposer,
-    $$SkippedMessageKeysTableAnnotationComposer,
     $$SkippedMessageKeysTableCreateCompanionBuilder,
-    $$SkippedMessageKeysTableUpdateCompanionBuilder,
-    (
-      SkippedMessageKey,
-      BaseReferences<_$AppDatabase, $SkippedMessageKeysTable, SkippedMessageKey>
-    ),
-    SkippedMessageKey,
-    PrefetchHooks Function()> {
+    $$SkippedMessageKeysTableUpdateCompanionBuilder> {
   $$SkippedMessageKeysTableTableManager(
       _$AppDatabase db, $SkippedMessageKeysTable table)
       : super(TableManagerState(
           db: db,
           table: table,
-          createFilteringComposer: () =>
-              $$SkippedMessageKeysTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$SkippedMessageKeysTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$SkippedMessageKeysTableAnnotationComposer(
-                  $db: db, $table: table),
+          filteringComposer:
+              $$SkippedMessageKeysTableFilterComposer(ComposerState(db, table)),
+          orderingComposer: $$SkippedMessageKeysTableOrderingComposer(
+              ComposerState(db, table)),
           updateCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<String> senderId = const Value.absent(),
@@ -3348,28 +3036,77 @@ class $$SkippedMessageKeysTableTableManager extends RootTableManager<
             messageKey: messageKey,
             storedAt: storedAt,
           ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
         ));
 }
 
-typedef $$SkippedMessageKeysTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $SkippedMessageKeysTable,
-    SkippedMessageKey,
-    $$SkippedMessageKeysTableFilterComposer,
-    $$SkippedMessageKeysTableOrderingComposer,
-    $$SkippedMessageKeysTableAnnotationComposer,
-    $$SkippedMessageKeysTableCreateCompanionBuilder,
-    $$SkippedMessageKeysTableUpdateCompanionBuilder,
-    (
-      SkippedMessageKey,
-      BaseReferences<_$AppDatabase, $SkippedMessageKeysTable, SkippedMessageKey>
-    ),
-    SkippedMessageKey,
-    PrefetchHooks Function()>;
+class $$SkippedMessageKeysTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $SkippedMessageKeysTable> {
+  $$SkippedMessageKeysTableFilterComposer(super.$state);
+  ColumnFilters<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get senderId => $state.composableBuilder(
+      column: $state.table.senderId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<Uint8List> get ratchetKey => $state.composableBuilder(
+      column: $state.table.ratchetKey,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get messageIndex => $state.composableBuilder(
+      column: $state.table.messageIndex,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<Uint8List> get messageKey => $state.composableBuilder(
+      column: $state.table.messageKey,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get storedAt => $state.composableBuilder(
+      column: $state.table.storedAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$SkippedMessageKeysTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $SkippedMessageKeysTable> {
+  $$SkippedMessageKeysTableOrderingComposer(super.$state);
+  ColumnOrderings<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get senderId => $state.composableBuilder(
+      column: $state.table.senderId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<Uint8List> get ratchetKey => $state.composableBuilder(
+      column: $state.table.ratchetKey,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get messageIndex => $state.composableBuilder(
+      column: $state.table.messageIndex,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<Uint8List> get messageKey => $state.composableBuilder(
+      column: $state.table.messageKey,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get storedAt => $state.composableBuilder(
+      column: $state.table.storedAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
 typedef $$ChatMessagesTableCreateCompanionBuilder = ChatMessagesCompanion
     Function({
   Value<int> id,
@@ -3397,153 +3134,22 @@ typedef $$ChatMessagesTableUpdateCompanionBuilder = ChatMessagesCompanion
   Value<int> createdAt,
 });
 
-class $$ChatMessagesTableFilterComposer
-    extends Composer<_$AppDatabase, $ChatMessagesTable> {
-  $$ChatMessagesTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get messageId => $composableBuilder(
-      column: $table.messageId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get conversationId => $composableBuilder(
-      column: $table.conversationId,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get senderId => $composableBuilder(
-      column: $table.senderId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get receiverId => $composableBuilder(
-      column: $table.receiverId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get plaintext => $composableBuilder(
-      column: $table.plaintext, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get ciphertext => $composableBuilder(
-      column: $table.ciphertext, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get type => $composableBuilder(
-      column: $table.type, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get otherUserId => $composableBuilder(
-      column: $table.otherUserId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
-}
-
-class $$ChatMessagesTableOrderingComposer
-    extends Composer<_$AppDatabase, $ChatMessagesTable> {
-  $$ChatMessagesTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get messageId => $composableBuilder(
-      column: $table.messageId, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get conversationId => $composableBuilder(
-      column: $table.conversationId,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get senderId => $composableBuilder(
-      column: $table.senderId, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get receiverId => $composableBuilder(
-      column: $table.receiverId, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get plaintext => $composableBuilder(
-      column: $table.plaintext, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get ciphertext => $composableBuilder(
-      column: $table.ciphertext, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get type => $composableBuilder(
-      column: $table.type, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get otherUserId => $composableBuilder(
-      column: $table.otherUserId, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
-}
-
-class $$ChatMessagesTableAnnotationComposer
-    extends Composer<_$AppDatabase, $ChatMessagesTable> {
-  $$ChatMessagesTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get messageId =>
-      $composableBuilder(column: $table.messageId, builder: (column) => column);
-
-  GeneratedColumn<String> get conversationId => $composableBuilder(
-      column: $table.conversationId, builder: (column) => column);
-
-  GeneratedColumn<String> get senderId =>
-      $composableBuilder(column: $table.senderId, builder: (column) => column);
-
-  GeneratedColumn<String> get receiverId => $composableBuilder(
-      column: $table.receiverId, builder: (column) => column);
-
-  GeneratedColumn<String> get plaintext =>
-      $composableBuilder(column: $table.plaintext, builder: (column) => column);
-
-  GeneratedColumn<String> get ciphertext => $composableBuilder(
-      column: $table.ciphertext, builder: (column) => column);
-
-  GeneratedColumn<String> get type =>
-      $composableBuilder(column: $table.type, builder: (column) => column);
-
-  GeneratedColumn<String> get otherUserId => $composableBuilder(
-      column: $table.otherUserId, builder: (column) => column);
-
-  GeneratedColumn<int> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-}
-
 class $$ChatMessagesTableTableManager extends RootTableManager<
     _$AppDatabase,
     $ChatMessagesTable,
     ChatMessage,
     $$ChatMessagesTableFilterComposer,
     $$ChatMessagesTableOrderingComposer,
-    $$ChatMessagesTableAnnotationComposer,
     $$ChatMessagesTableCreateCompanionBuilder,
-    $$ChatMessagesTableUpdateCompanionBuilder,
-    (
-      ChatMessage,
-      BaseReferences<_$AppDatabase, $ChatMessagesTable, ChatMessage>
-    ),
-    ChatMessage,
-    PrefetchHooks Function()> {
+    $$ChatMessagesTableUpdateCompanionBuilder> {
   $$ChatMessagesTableTableManager(_$AppDatabase db, $ChatMessagesTable table)
       : super(TableManagerState(
           db: db,
           table: table,
-          createFilteringComposer: () =>
-              $$ChatMessagesTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$ChatMessagesTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$ChatMessagesTableAnnotationComposer($db: db, $table: table),
+          filteringComposer:
+              $$ChatMessagesTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$ChatMessagesTableOrderingComposer(ComposerState(db, table)),
           updateCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<String> messageId = const Value.absent(),
@@ -3592,28 +3198,116 @@ class $$ChatMessagesTableTableManager extends RootTableManager<
             otherUserId: otherUserId,
             createdAt: createdAt,
           ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
         ));
 }
 
-typedef $$ChatMessagesTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $ChatMessagesTable,
-    ChatMessage,
-    $$ChatMessagesTableFilterComposer,
-    $$ChatMessagesTableOrderingComposer,
-    $$ChatMessagesTableAnnotationComposer,
-    $$ChatMessagesTableCreateCompanionBuilder,
-    $$ChatMessagesTableUpdateCompanionBuilder,
-    (
-      ChatMessage,
-      BaseReferences<_$AppDatabase, $ChatMessagesTable, ChatMessage>
-    ),
-    ChatMessage,
-    PrefetchHooks Function()>;
+class $$ChatMessagesTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $ChatMessagesTable> {
+  $$ChatMessagesTableFilterComposer(super.$state);
+  ColumnFilters<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get messageId => $state.composableBuilder(
+      column: $state.table.messageId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get conversationId => $state.composableBuilder(
+      column: $state.table.conversationId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get senderId => $state.composableBuilder(
+      column: $state.table.senderId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get receiverId => $state.composableBuilder(
+      column: $state.table.receiverId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get plaintext => $state.composableBuilder(
+      column: $state.table.plaintext,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get ciphertext => $state.composableBuilder(
+      column: $state.table.ciphertext,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get type => $state.composableBuilder(
+      column: $state.table.type,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get otherUserId => $state.composableBuilder(
+      column: $state.table.otherUserId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$ChatMessagesTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $ChatMessagesTable> {
+  $$ChatMessagesTableOrderingComposer(super.$state);
+  ColumnOrderings<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get messageId => $state.composableBuilder(
+      column: $state.table.messageId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get conversationId => $state.composableBuilder(
+      column: $state.table.conversationId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get senderId => $state.composableBuilder(
+      column: $state.table.senderId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get receiverId => $state.composableBuilder(
+      column: $state.table.receiverId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get plaintext => $state.composableBuilder(
+      column: $state.table.plaintext,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get ciphertext => $state.composableBuilder(
+      column: $state.table.ciphertext,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get type => $state.composableBuilder(
+      column: $state.table.type,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get otherUserId => $state.composableBuilder(
+      column: $state.table.otherUserId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;

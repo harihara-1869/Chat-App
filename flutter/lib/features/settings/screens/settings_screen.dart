@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../profile/providers/profile_provider.dart';
 import '../../profile/repositories/profile_repository.dart';
-import '../../../core/constants/constants.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});

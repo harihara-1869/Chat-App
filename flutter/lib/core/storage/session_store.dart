@@ -97,10 +97,7 @@ class DriftSignalSessionStore implements SessionStore {
   }
 }
 
-final driftSessionStoreProvider = Provider<DriftSignalSessionStore>((ref) {
-  final db = ref.watch(appDatabaseProvider).value;
-  if (db == null) {
-    throw StateError('AppDatabase not initialized');
-  }
+final driftSessionStoreProvider = FutureProvider<DriftSignalSessionStore>((ref) async {
+  final db = await ref.watch(appDatabaseProvider.future);
   return DriftSignalSessionStore(db);
 });

@@ -1,7 +1,8 @@
 import FriendRequest from "../models/friendRequest.model.js";
 import User from "../models/user.model.js";
 import Conversation from "../models/conversation.model.js";
-import { io, getReciverSocketId, bufferPendingEvent } from "../lib/socket.js";
+import { io, getReciverSocketId, bufferPendingEvent, sendToUser } from "../lib/socket.js";
+import { sendFriendRequestNotification, sendFriendAcceptedNotification } from "../lib/firebase.js";
 
 export async function friendRequest(req, res) {
   try {
@@ -61,11 +62,12 @@ export async function friendRequest(req, res) {
     const populatedRequest = await FriendRequest.findById(newRequest._id)
       .populate("senderId", "fullName profilePic email");
 
-    const receiverSocketId = getReciverSocketId(receiverId.toString());
+    const receiverSocketId = await getReciverSocketId(receiverId.toString());
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("newFriendRequest", populatedRequest);
     } else {
       await bufferPendingEvent(receiverId, "friendRequest", populatedRequest.toObject());
+      await sendFriendRequestNotification(populatedRequest.toObject(), receiverId.toString());
     }
 
     return res.json({ success: true });
@@ -125,8 +127,8 @@ export async function acceptFriendRequest(req, res) {
     }
 
     // Emit socket events to both users
-    const senderSocketId = getReciverSocketId(userA.toString());
-    const receiverSocketId = getReciverSocketId(userB.toString());
+    const senderSocketId = await getReciverSocketId(userA.toString());
+    const receiverSocketId = await getReciverSocketId(userB.toString());
 
     // Get both users' info for the event
     const senderUser = await User.findById(userA).select("fullName profilePic email");
@@ -139,11 +141,13 @@ export async function acceptFriendRequest(req, res) {
       io.to(senderSocketId).emit("friendRequestAccepted", senderPayload);
     } else {
       await bufferPendingEvent(userA, "friendAccepted", senderPayload);
+      await sendFriendAcceptedNotification(senderPayload, userA.toString());
     }
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("friendRequestAccepted", receiverPayload);
     } else {
       await bufferPendingEvent(userB, "friendAccepted", receiverPayload);
+      await sendFriendAcceptedNotification(receiverPayload, userB.toString());
     }
 
     return res.json({ success: true });

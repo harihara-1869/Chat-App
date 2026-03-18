@@ -7,6 +7,7 @@ import User from "../models/user.model.js";
 import PendingEvent from "../models/pendingEvent.model.js";
 import redisClient from "./redis.js";
 import { createAdapter } from "@socket.io/redis-adapter";
+import { sendPushNotification, sendFriendRequestNotification, sendFriendAcceptedNotification } from "./firebase.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -123,6 +124,22 @@ export async function flushPendingEvents(userId) {
     console.log(`Flushed ${pendingEvents.length} pending events for user ${userId}`);
   } catch (error) {
     console.error("Error flushing pending events:", error);
+  }
+}
+
+export async function sendToUser(userId, eventName, payload, options = {}) {
+  const { skipPush = false } = options;
+  const socketId = await getSocketId(userId.toString());
+  
+  if (socketId) {
+    io.to(socketId).emit(eventName, payload);
+    return { sent: true, method: 'socket' };
+  } else {
+    await bufferPendingEvent(userId, eventName, payload);
+    if (!skipPush) {
+      await sendPushNotification(userId, eventName, payload);
+    }
+    return { sent: true, method: 'buffered' };
   }
 }
 

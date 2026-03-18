@@ -146,6 +146,22 @@ void main() {
       verify(() => mockFriendRepository.removeFriend('friend1')).called(1);
     });
 
+    test('blockUser should remove user from friends and pending requests', () async {
+      when(() => mockFriendRepository.blockUser(any())).thenAnswer((_) async {});
+
+      await friendsNotifier.blockUser('friend1');
+
+      verify(() => mockFriendRepository.blockUser('friend1')).called(1);
+    });
+
+    test('blockUser should set error on failure', () async {
+      when(() => mockFriendRepository.blockUser(any())).thenThrow(Exception('Failed'));
+
+      await friendsNotifier.blockUser('friend1');
+
+      expect(friendsNotifier.state.error, isNotNull);
+    });
+
     test('refresh should reload friends', () async {
       when(() => mockFriendRepository.getFriends()).thenAnswer((_) async => testFriends);
       when(() => mockFriendRepository.getPendingRequests()).thenAnswer((_) async => testPendingRequests);

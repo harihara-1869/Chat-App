@@ -1,10 +1,15 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/constants.dart';
 import '../../../core/core.dart';
 import '../../../core/services/encrypted_messaging_service.dart';
+import '../../../core/services/attachment_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../friends/providers/friend_provider.dart';
 import '../../messaging/models/message.dart';
@@ -294,9 +299,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.attach_file),
-                    onPressed: () {
-                      // TODO: Implement attachment picker
-                    },
+                    onPressed: () => _pickAttachment(),
                   ),
                   Expanded(
                     child: TextField(
@@ -365,6 +368,94 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         );
       }
     }
+  }
+
+  Future<void> _pickAttachment() async {
+    final picker = ImagePicker();
+    
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take a Photo'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    try {
+      final pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        await _sendAttachment(pickedFile.path, pickedFile.mimeType ?? 'image/jpeg');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick image: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _sendAttachment(String filePath, String mimeType) async {
+    try {
+      final fileBytes = await _readFileBytes(filePath);
+      final attachmentRepo = AttachmentRepository();
+      
+      final result = await attachmentRepo.uploadEncryptedFile(
+        fileBytes,
+        mimeType,
+        fileBytes.length,
+      );
+
+      final attachment = Attachment(
+        fileKey: result.fileKey,
+        type: 'image',
+        mimeType: mimeType,
+        size: fileBytes.length,
+        encryptionInfo: result.keyAndIV,
+      );
+
+      final messagingService = ref.read(encryptedMessagingServiceProvider);
+      await messagingService.sendMessage(
+        recipientId: widget.otherUserId,
+        conversationId: widget.otherUserId,
+        plaintext: '[Encrypted Image]',
+        attachments: [attachment],
+      );
+
+      ref.read(chatProvider(widget.otherUserId).notifier).refresh();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send attachment: $e')),
+        );
+      }
+    }
+  }
+
+  Future<Uint8List> _readFileBytes(String path) async {
+    final file = File(path);
+    return file.readAsBytes();
   }
 
   void _showEncryptionInfo(BuildContext context) {

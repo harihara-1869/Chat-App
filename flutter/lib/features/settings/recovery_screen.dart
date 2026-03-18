@@ -8,7 +8,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:crypto/crypto.dart';
 
-import '../../../core/constants/constants.dart';
 import '../../../core/storage/database/app_database.dart';
 
 const _hasShownBackupPromptKey = 'has_shown_backup_prompt';

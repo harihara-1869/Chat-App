@@ -118,25 +118,31 @@ class Message extends Equatable {
 class Attachment extends Equatable {
   final String? url;
   final String? encryptedUrl;
+  final String? fileKey;
   final String type;
   final String? mimeType;
   final int? size;
+  final Map<String, dynamic>? encryptionInfo;
 
   const Attachment({
     this.url,
     this.encryptedUrl,
+    this.fileKey,
     required this.type,
     this.mimeType,
     this.size,
+    this.encryptionInfo,
   });
 
   factory Attachment.fromJson(Map<String, dynamic> json) {
     return Attachment(
       url: json['url'] as String?,
       encryptedUrl: json['encryptedUrl'] as String?,
+      fileKey: json['fileKey'] as String?,
       type: json['type'] as String? ?? 'image',
       mimeType: json['mimeType'] as String?,
       size: json['size'] as int?,
+      encryptionInfo: json['encryptionInfo'] as Map<String, dynamic>?,
     );
   }
 
@@ -144,17 +150,19 @@ class Attachment extends Equatable {
     return {
       if (url != null) 'url': url,
       if (encryptedUrl != null) 'encryptedUrl': encryptedUrl,
+      if (fileKey != null) 'fileKey': fileKey,
       'type': type,
       if (mimeType != null) 'mimeType': mimeType,
       if (size != null) 'size': size,
+      if (encryptionInfo != null) 'encryptionInfo': encryptionInfo,
     };
   }
 
   bool get isImage => type == 'image';
-  bool get isEncrypted => encryptedUrl != null;
+  bool get isEncrypted => encryptedUrl != null || fileKey != null;
 
   @override
-  List<Object?> get props => [url, encryptedUrl, type, mimeType, size];
+  List<Object?> get props => [url, encryptedUrl, fileKey, type, mimeType, size, encryptionInfo];
 }
 
 /// Conversation model

@@ -5,6 +5,7 @@ import 'package:chat_app/features/messaging/repositories/messaging_repository.da
 import 'package:chat_app/features/messaging/models/message.dart';
 import 'package:chat_app/core/network/api_client.dart';
 import 'package:chat_app/core/errors/exceptions.dart';
+import 'package:chat_app/core/constants/constants.dart';
 
 class MockApiClient extends Mock implements ApiClient {}
 
@@ -21,11 +22,12 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(<Message>[]);
+    registerFallbackValue(FormData());
   });
 
   group('MessagingRepository', () {
     group('getMessages', () {
-      test('should return list of messages on success', () async {
+      test('should return MessagesPage with messages on success', () async {
         final responseData = [
           {
             '_id': 'msg1',
@@ -40,19 +42,74 @@ void main() {
           },
         ];
 
-        when(() => mockApiClient.get(any()))
-            .thenAnswer((_) async => _MockResponse(data: responseData));
+        when(() => mockApiClient.get(
+          any(),
+          queryParameters: any(named: 'queryParameters'),
+        )).thenAnswer((_) async => _MockResponse(data: responseData));
 
-        final messages = await messagingRepository.getMessages('user2');
+        final page = await messagingRepository.getMessages('user2');
 
-        expect(messages.length, 1);
-        expect(messages.first.id, 'msg1');
-        expect(messages.first.ciphertext, 'encrypted1');
+        expect(page.messages.length, 1);
+        expect(page.messages.first.id, 'msg1');
+        expect(page.messages.first.ciphertext, 'encrypted1');
+        expect(page.hasMore, false);
+      });
+
+      test('should return hasMore true when more messages available', () async {
+        final responseData = List.generate(31, (i) => {
+          '_id': 'msg$i',
+          'conversationId': 'conv1',
+          'senderId': 'user1',
+          'senderDeviceId': 1,
+          'receiverId': 'user2',
+          'recipientDeviceId': 1,
+          'type': 'message',
+          'ciphertext': 'encrypted$i',
+          'createdAt': '2024-01-01T12:00:00.000',
+        });
+
+        when(() => mockApiClient.get(
+          any(),
+          queryParameters: any(named: 'queryParameters'),
+        )).thenAnswer((_) async => _MockResponse(data: responseData));
+
+        final page = await messagingRepository.getMessages('user2');
+
+        expect(page.messages.length, 31);
+        expect(page.hasMore, true);
+      });
+
+      test('should pass limit and before params to API', () async {
+        final responseData = <dynamic>[];
+
+        when(() => mockApiClient.get(
+          any(),
+          queryParameters: {
+            'limit': 30,
+            'before': 'msg100',
+          },
+        )).thenAnswer((_) async => _MockResponse(data: responseData));
+
+        await messagingRepository.getMessages(
+          'user2',
+          limit: 30,
+          before: 'msg100',
+        );
+
+        verify(() => mockApiClient.get(
+          any(),
+          queryParameters: {
+            'limit': 30,
+            'before': 'msg100',
+          },
+        )).called(1);
       });
 
       test('should throw ServerException on failure', () async {
-        when(() => mockApiClient.get(any()))
-            .thenThrow(const ServerException(message: 'Failed to load messages'));
+        when(() => mockApiClient.get(
+          any(),
+          queryParameters: any(named: 'queryParameters'),
+        )).thenThrow(const ServerException(message: 'Failed to load messages'));
 
         expect(
           () => messagingRepository.getMessages('user2'),
@@ -171,6 +228,9 @@ void main() {
         expect(message.registrationId, 5);
       });
     });
+
+    // Note: uploadImage test skipped because it requires mocking MultipartFile.fromFile
+    // which is a Dio internal. The actual upload functionality is tested in integration tests.
   });
 }
 

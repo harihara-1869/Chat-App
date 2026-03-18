@@ -1,8 +1,9 @@
-import { getReciverSocketId, bufferPendingEvent } from "../lib/socket.js";
+import { getReciverSocketId, bufferPendingEvent, sendToUser } from "../lib/socket.js";
 import Message from "../models/message.model.js";
 import Conversation from "../models/conversation.model.js";
 import Device from "../models/device.model.js";
 import { io } from "../lib/socket.js";
+import { sendPushNotification } from "../lib/firebase.js";
 
 /**
  * Get messages between two users with pagination.
@@ -144,15 +145,22 @@ export const sendMessage = async (req, res) => {
     conversation.lastMessage = newMessage._id;
     await conversation.save();
 
-    // Emit to receiver if online, otherwise buffer for later delivery
-    const receiverSocketId = getReciverSocketId(receiverId.toString());
+    // Emit to receiver if online, otherwise buffer for later delivery and send FCM
     const messagePayload = newMessage.toObject();
     
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("newMessage", messagePayload);
+    const socketId = await getReciverSocketId(receiverId.toString());
+    if (socketId) {
+      io.to(socketId).emit("newMessage", messagePayload);
     } else {
       // Buffer the message for offline delivery
       await bufferPendingEvent(receiverId, "newMessage", messagePayload);
+      // Send push notification for offline user
+      await sendPushNotification(receiverId.toString(), "newMessage", {
+        ...messagePayload,
+        senderId: senderId.toString(),
+        receiverId: receiverId.toString(),
+        conversationId: conversation._id.toString(),
+      });
     }
 
     res.status(201).json(newMessage);

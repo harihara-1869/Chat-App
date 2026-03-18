@@ -47,10 +47,7 @@ class DriftKyberPreKeyStore implements KyberPreKeyStore {
   }
 }
 
-final driftKyberPreKeyStoreProvider = Provider<DriftKyberPreKeyStore>((ref) {
-  final db = ref.watch(appDatabaseProvider).value;
-  if (db == null) {
-    throw StateError('AppDatabase not initialized');
-  }
+final driftKyberPreKeyStoreProvider = FutureProvider<DriftKyberPreKeyStore>((ref) async {
+  final db = await ref.watch(appDatabaseProvider.future);
   return DriftKyberPreKeyStore(db);
 });

@@ -44,10 +44,7 @@ class DriftSignedPreKeyStore implements SignedPreKeyStore {
   }
 }
 
-final driftSignedPreKeyStoreProvider = Provider<DriftSignedPreKeyStore>((ref) {
-  final db = ref.watch(appDatabaseProvider).value;
-  if (db == null) {
-    throw StateError('AppDatabase not initialized');
-  }
+final driftSignedPreKeyStoreProvider = FutureProvider<DriftSignedPreKeyStore>((ref) async {
+  final db = await ref.watch(appDatabaseProvider.future);
   return DriftSignedPreKeyStore(db);
 });

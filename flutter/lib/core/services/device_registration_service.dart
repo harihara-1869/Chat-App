@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:libsignal/libsignal.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../network/api_client.dart';
 import '../providers/core_providers.dart';
 import '../storage/secure_key_store.dart';
 import '../storage/signal_store_bundle.dart';
@@ -261,9 +260,9 @@ class DeviceRegistrationService {
   }
 }
 
-final deviceRegistrationServiceProvider = Provider<DeviceRegistrationService>((ref) {
+final deviceRegistrationServiceProvider = FutureProvider<DeviceRegistrationService>((ref) async {
   final secureKeyStore = ref.watch(secureKeyStoreProvider);
-  final bundle = ref.watch(signalStoreBundleProvider);
+  final bundle = await ref.watch(signalStoreBundleProvider.future);
   final apiClient = ref.watch(apiClientProvider);
   final keyRepository = KeyRepository(apiClient: apiClient);
 

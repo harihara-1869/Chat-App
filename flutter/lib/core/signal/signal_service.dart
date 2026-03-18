@@ -269,6 +269,10 @@ class SignalException implements Exception {
 }
 
 final signalServiceProvider = Provider<SignalService>((ref) {
-  final bundle = ref.watch(signalStoreBundleProvider);
+  final bundleAsync = ref.watch(signalStoreBundleProvider);
+  final bundle = bundleAsync.valueOrNull;
+  if (bundle == null) {
+    throw StateError('SignalStoreBundle not initialized');
+  }
   return SignalService(bundle: bundle);
 });

@@ -127,18 +127,27 @@ class ChatNotifier extends StateNotifier<ChatState> {
   /// Listen for new messages from socket
   void _listenForNewMessages() {
     _messageSubscription = _socketService.onNewMessage.listen((data) {
-      final message = Message.fromJson(data);
+      handleIncomingMessage(data);
+    });
+  }
 
-      // Only add message if it's from or to the current other user
-      if ((message.senderId == state.odtherUserId &&
-              message.receiverId == _currentUserId) ||
-          (message.senderId == _currentUserId &&
-              message.receiverId == state.odtherUserId)) {
+  /// Handle incoming message from socket or push notification
+  void handleIncomingMessage(Map<String, dynamic> data) {
+    final message = Message.fromJson(data);
+
+    // Only add message if it's from or to the current other user
+    if ((message.senderId == state.odtherUserId &&
+            message.receiverId == _currentUserId) ||
+        (message.senderId == _currentUserId &&
+            message.receiverId == state.odtherUserId)) {
+      // Check if message already exists (dedup)
+      final exists = state.messages.any((m) => m.id == message.id);
+      if (!exists) {
         state = state.copyWith(
           messages: [...state.messages, message],
         );
       }
-    });
+    }
   }
 
   /// Send an encrypted message

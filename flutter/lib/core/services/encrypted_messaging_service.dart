@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../network/api_client.dart';
 import '../storage/database/app_database.dart';
 import '../storage/database/database_provider.dart';
-import '../storage/signal_store_bundle.dart';
 import '../storage/message_store.dart';
 import '../signal/signal_service.dart';
 import '../services/device_registration_service.dart';
@@ -187,7 +186,8 @@ final encryptedMessagingServiceProvider = Provider<EncryptedMessagingService>((r
   final keyRepository = ref.watch(keyRepositoryProvider);
   final messageStore = ref.watch(messageStoreProvider).value;
   final db = ref.watch(appDatabaseProvider).value;
-  final deviceRegistrationService = ref.watch(deviceRegistrationServiceProvider);
+  final deviceRegistrationServiceAsync = ref.watch(deviceRegistrationServiceProvider);
+  final deviceRegistrationService = deviceRegistrationServiceAsync.valueOrNull;
   
   if (messageStore == null || db == null) {
     throw StateError('Database not initialized');
@@ -208,7 +208,8 @@ final encryptedMessagingServiceAsyncProvider = FutureProvider<EncryptedMessaging
   final keyRepository = ref.watch(keyRepositoryProvider);
   final messageStore = await ref.watch(messageStoreProvider.future);
   final db = await ref.watch(appDatabaseProvider.future);
-  final deviceRegistrationService = ref.watch(deviceRegistrationServiceProvider);
+  final deviceRegistrationServiceAsync = ref.watch(deviceRegistrationServiceProvider);
+  final deviceRegistrationService = deviceRegistrationServiceAsync.valueOrNull;
 
   return EncryptedMessagingService(
     signalService: signalService,

@@ -1,18 +1,12 @@
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pointycastle/export.dart';
-
-import '../../../core/constants/constants.dart';
-import '../../../core/storage/database/database_provider.dart';
 
 const _hasShownBackupPromptKey = 'has_shown_backup_prompt';
-const _dbEncryptionKeyStorageKey = 'db_encryption_key';
 const _recoveryPhraseKey = 'recovery_phrase';
 
 final backupScreenViewModelProvider = StateNotifierProvider<BackupScreenViewModel, BackupScreenState>((ref) {

@@ -1,21 +1,16 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cookie_jar/cookie_jar.dart';
 
 import '../network/api_client.dart';
 import '../providers/core_providers.dart';
-import '../constants/constants.dart';
-import '../socket/socket_service.dart';
 
 class PushNotificationService {
   final FirebaseMessaging _messaging;
   final ApiClient _apiClient;
-  final SocketService _socketService;
   static GoRouter? _router;
   
   final _notificationController = StreamController<Map<String, dynamic>>.broadcast();
@@ -23,10 +18,8 @@ class PushNotificationService {
   PushNotificationService({
     FirebaseMessaging? messaging,
     required ApiClient apiClient,
-    required SocketService socketService,
   })  : _messaging = messaging ?? FirebaseMessaging.instance,
-        _apiClient = apiClient,
-        _socketService = socketService;
+        _apiClient = apiClient;
 
   static void setRouter(GoRouter router) {
     _router = router;
@@ -37,7 +30,6 @@ class PushNotificationService {
   static Future<void> initialize() async {
     final service = PushNotificationService(
       apiClient: ApiClient(),
-      socketService: SocketService(cookieJar: CookieJar()),
     );
     
     await service._init();
@@ -56,7 +48,7 @@ class PushNotificationService {
     
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
       await _setupToken();
-      await _setupForegroundHandler();
+      _setupForegroundHandler();
       await _setupNotificationTapHandler();
     }
   }
@@ -94,15 +86,36 @@ class PushNotificationService {
     
     if (data.isNotEmpty) {
       final payload = Map<String, dynamic>.from(data);
-      _notificationController.add(payload);
       
+      // Route through socket service for unified handling
       if (payload['eventName'] == 'newMessage') {
-        final messageData = payload['payload'] as Map<String, dynamic>?;
-        if (messageData != null) {
-          _notificationController.add(Map<String, dynamic>.from(messageData));
+        // Add to notification controller for listeners
+        _notificationController.add(payload);
+        
+        // Also emit to socket service for unified handling
+        try {
+          // Extract the message payload if nested
+          final messageData = payload['payload'] as Map<String, dynamic>?;
+          if (messageData != null) {
+            _emitToSocketService(messageData);
+          }
+        } catch (e) {
+          // Silently fail if socket service not available
         }
       }
     }
+  }
+
+  void _emitToSocketService(Map<String, dynamic> messageData) {
+    // This will be called from within a widget context where ref is available
+    // In practice, we use a static callback set by the app
+    _socketMessageCallback?.call(messageData);
+  }
+
+  static void Function(Map<String, dynamic>)? _socketMessageCallback;
+  
+  static void setSocketMessageCallback(void Function(Map<String, dynamic>) callback) {
+    _socketMessageCallback = callback;
   }
 
   Future<void> _setupNotificationTapHandler() async {
@@ -120,8 +133,8 @@ class PushNotificationService {
     if (data.containsKey('conversationId')) {
       final conversationId = data['conversationId'] as String;
       _router?.push('/home/chat/$conversationId');
-    } else if (data.containsKey('userId')) {
-      final userId = data['userId'] as String;
+    } else if (data.containsKey('senderId')) {
+      final userId = data['senderId'] as String;
       _router?.push('/home/chat/$userId');
     }
   }
@@ -133,10 +146,8 @@ class PushNotificationService {
 
 final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
   final apiClient = ref.watch(apiClientProvider);
-  final socketService = ref.watch(socketServiceProvider);
   
   return PushNotificationService(
     apiClient: apiClient,
-    socketService: socketService,
   );
 });

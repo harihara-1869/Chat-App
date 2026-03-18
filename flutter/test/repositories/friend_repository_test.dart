@@ -137,6 +137,25 @@ void main() {
       });
     });
 
+    group('blockUser', () {
+      test('should call API to block user', () async {
+        when(() => mockApiClient.post(any())).thenAnswer((_) async => _MockResponse(data: {}));
+
+        await friendRepository.blockUser('user123');
+
+        verify(() => mockApiClient.post('/api/friend/block/user123')).called(1);
+      });
+
+      test('should throw ServerException on failure', () async {
+        when(() => mockApiClient.post(any())).thenThrow(const ServerException(message: 'Cannot block user'));
+
+        expect(
+          () => friendRepository.blockUser('user123'),
+          throwsA(isA<ServerException>()),
+        );
+      });
+    });
+
     group('searchUsers', () {
       test('should return list of search results on success', () async {
         final responseData = [

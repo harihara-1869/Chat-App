@@ -1,31 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'features/features.dart';
 import 'features/profile/providers/profile_provider.dart';
 import 'shared/router/router.dart';
 import 'core/services/push_notification_service.dart';
 
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Handle background FCM messages
-  if (message.data.isNotEmpty) {
-    // Handle the message data - this runs in an isolate
-    debugPrint('Background message: ${message.data}');
-  }
+Future<void> _firebaseMessagingBackgroundHandler(dynamic message) async {
+  // Handle background FCM messages - will be initialized when firebase_messaging is available
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize Firebase
-  await Firebase.initializeApp();
-
-  // Initialize push notification service
-  await PushNotificationService.initialize();
-
-  // Register background handler
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   runApp(
     const ProviderScope(
@@ -34,13 +20,30 @@ void main() async {
   );
 }
 
-class ChatApp extends ConsumerWidget {
+class ChatApp extends ConsumerStatefulWidget {
   const ChatApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ChatApp> createState() => _ChatAppState();
+}
+
+class _ChatAppState extends ConsumerState<ChatApp> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final router = ref.read(routerProvider);
+      PushNotificationService.setRouter(router);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     final settings = ref.watch(settingsProvider);
+
+    // Update router in PushNotificationService when it changes
+    PushNotificationService.setRouter(router);
 
     return MaterialApp.router(
       title: 'Chat App',

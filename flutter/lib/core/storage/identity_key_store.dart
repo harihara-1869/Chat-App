@@ -64,11 +64,8 @@ class DriftIdentityKeyStore implements IdentityKeyStore {
   }
 }
 
-final driftIdentityKeyStoreProvider = Provider<DriftIdentityKeyStore>((ref) {
-  final db = ref.watch(appDatabaseProvider).value;
+final driftIdentityKeyStoreProvider = FutureProvider<DriftIdentityKeyStore>((ref) async {
+  final db = await ref.watch(appDatabaseProvider.future);
   final secureKeyStore = ref.watch(secureKeyStoreProvider);
-  if (db == null) {
-    throw StateError('AppDatabase not initialized');
-  }
   return DriftIdentityKeyStore(db, secureKeyStore);
 });

@@ -57,7 +57,11 @@ final isAuthenticatedProvider = FutureProvider<bool>((ref) async {
 
 /// Provider for Signal Protocol Service (E2EE)
 final signalServiceProvider = Provider<SignalService>((ref) {
-  final bundle = ref.watch(signalStoreBundleProvider);
+  final bundleAsync = ref.watch(signalStoreBundleProvider);
+  final bundle = bundleAsync.valueOrNull;
+  if (bundle == null) {
+    throw StateError('SignalStoreBundle not initialized');
+  }
   final signalService = SignalService(bundle: bundle);
 
   ref.onDispose(() {

@@ -252,11 +252,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
 /// Provider for Auth State
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+  final deviceRegistrationServiceAsync = ref.watch(deviceRegistrationServiceProvider);
+  final deviceRegistrationService = deviceRegistrationServiceAsync.valueOrNull;
+  
   return AuthNotifier(
     authRepository: ref.watch(authRepositoryProvider),
     socketService: ref.watch(socketServiceProvider),
     secureStorage: ref.watch(secureStorageProvider),
-    deviceRegistrationService: ref.watch(deviceRegistrationServiceProvider),
+    deviceRegistrationService: deviceRegistrationService,
   );
 });
 
