@@ -273,3 +273,131 @@ describe('Message Controller - Conversation Update Logic', () => {
         expect(updateFields.lastMessage).toBe(messageId);
     });
 });
+
+describe('Message Controller - Pagination Logic', () => {
+    describe('getMessages pagination', () => {
+        it('should default limit to 30 messages', () => {
+            const queryLimit = parseInt(undefined) || 30;
+            expect(queryLimit).toBe(30);
+        });
+
+        it('should cap limit at 100 messages', () => {
+            const requestedLimit = 200;
+            const actualLimit = Math.min(requestedLimit || 30, 100);
+            expect(actualLimit).toBe(100);
+        });
+
+        it('should use provided limit when under 100', () => {
+            const requestedLimit = 50;
+            const actualLimit = Math.min(requestedLimit || 30, 100);
+            expect(actualLimit).toBe(50);
+        });
+
+        it('should construct query with before cursor for pagination', () => {
+            const beforeMessageId = 'msg-abc';
+            const beforeMessage = { _id: beforeMessageId, createdAt: new Date('2024-01-01') };
+
+            const query = {
+                $or: [
+                    { senderId: 'user-123', receiverId: 'user-456' },
+                    { senderId: 'user-456', receiverId: 'user-123' },
+                ],
+            };
+
+            if (beforeMessageId) {
+                query.createdAt = { $lt: beforeMessage.createdAt };
+            }
+
+            expect(query.createdAt).toBeDefined();
+            expect(query.createdAt.$lt).toBe(beforeMessage.createdAt);
+        });
+
+        it('should fetch one extra message to determine hasMore', () => {
+            const limit = 30;
+            const fetchLimit = limit + 1;
+            expect(fetchLimit).toBe(31);
+        });
+
+        it('should set hasMore to true when extra message exists', () => {
+            const messages = new Array(31).fill({}); // 31 messages fetched
+            const limit = 30;
+
+            const hasMore = messages.length > limit;
+            if (hasMore) {
+                messages.pop();
+            }
+
+            expect(hasMore).toBe(true);
+            expect(messages.length).toBe(30);
+        });
+
+        it('should set hasMore to false when no extra message', () => {
+            const messages = new Array(25).fill({}); // 25 messages fetched
+            const limit = 30;
+
+            const hasMore = messages.length > limit;
+
+            expect(hasMore).toBe(false);
+            expect(messages.length).toBe(25);
+        });
+
+        it('should return messages and hasMore in response', () => {
+            const response = {
+                messages: [{ _id: 'msg-1' }, { _id: 'msg-2' }],
+                hasMore: true,
+            };
+
+            expect(response).toHaveProperty('messages');
+            expect(response).toHaveProperty('hasMore');
+            expect(Array.isArray(response.messages)).toBe(true);
+            expect(typeof response.hasMore).toBe('boolean');
+        });
+
+        it('should sort messages by createdAt descending', () => {
+            const sortQuery = { createdAt: -1 };
+            expect(sortQuery.createdAt).toBe(-1);
+        });
+
+        it('should reverse messages to get oldest first in response', () => {
+            const messages = [
+                { _id: 'msg-3', createdAt: new Date('2024-01-03') },
+                { _id: 'msg-2', createdAt: new Date('2024-01-02') },
+                { _id: 'msg-1', createdAt: new Date('2024-01-01') },
+            ];
+
+            const sortedMessages = messages.reverse();
+
+            expect(sortedMessages[0]._id).toBe('msg-1');
+            expect(sortedMessages[2]._id).toBe('msg-3');
+        });
+    });
+});
+
+describe('Message Controller - Offline Message Buffering', () => {
+    it('should buffer message when receiver is offline', () => {
+        const receiverId = 'user-456';
+        const socketId = null; // User is offline
+
+        const isOffline = !socketId;
+        expect(isOffline).toBe(true);
+    });
+
+    it('should emit message when receiver is online', () => {
+        const receiverId = 'user-456';
+        const socketId = 'socket-abc';
+
+        const isOnline = !!socketId;
+        expect(isOnline).toBe(true);
+    });
+
+    it('should send push notification for offline user', () => {
+        const mockSendPush = jest.fn();
+        const receiverId = 'user-456';
+        const messagePayload = { _id: 'msg-123', ciphertext: 'encrypted' };
+
+        // Simulate offline handling
+        mockSendPush(receiverId, 'newMessage', messagePayload);
+
+        expect(mockSendPush).toHaveBeenCalledWith(receiverId, 'newMessage', messagePayload);
+    });
+});

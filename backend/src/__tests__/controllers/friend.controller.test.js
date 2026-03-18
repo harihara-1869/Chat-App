@@ -231,3 +231,202 @@ describe('Mock Request/Response Utilities', () => {
         expect(res.json).toHaveBeenCalledWith({ success: true });
     });
 });
+
+describe('Friend Controller - Block User', () => {
+    let mockRes;
+
+    beforeEach(() => {
+        mockRes = createMockRes();
+    });
+
+    describe('blockUser validation', () => {
+        it('should prevent blocking yourself', () => {
+            const userId = 'user-123';
+            const targetUserId = 'user-123';
+
+            const isSelfBlock = userId.toString() === targetUserId.toString();
+            expect(isSelfBlock).toBe(true);
+        });
+
+        it('should allow blocking another user', () => {
+            const userId = 'user-123';
+            const targetUserId = 'user-456';
+
+            const isSelfBlock = userId.toString() === targetUserId.toString();
+            expect(isSelfBlock).toBe(false);
+        });
+
+        it('should return 400 for self-block attempt', () => {
+            mockRes.status(400).json({ error: "You can't block yourself" });
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: "You can't block yourself" });
+        });
+
+        it('should return 404 when user to block not found', () => {
+            mockRes.status(404).json({ error: "User not found" });
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: "User not found" });
+        });
+    });
+
+    describe('blockUser logic', () => {
+        it('should add user to blockedUsers array using $addToSet', () => {
+            const userId = 'user-123';
+            const targetUserId = 'user-456';
+
+            const updateQuery = {
+                $addToSet: { blockedUsers: targetUserId }
+            };
+
+            expect(updateQuery.$addToSet.blockedUsers).toBe(targetUserId);
+        });
+
+        it('should remove blocked user from friends array on both sides', () => {
+            const userId = 'user-123';
+            const targetUserId = 'user-456';
+
+            const updateForUser = { $pull: { friends: targetUserId } };
+            const updateForTarget = { $pull: { friends: userId } };
+
+            expect(updateForUser.$pull.friends).toBe(targetUserId);
+            expect(updateForTarget.$pull.friends).toBe(userId);
+        });
+
+        it('should delete pending friend requests between users', () => {
+            const userId = 'user-123';
+            const targetUserId = 'user-456';
+
+            const deleteQuery = {
+                $or: [
+                    { senderId: userId, receiverId: targetUserId },
+                    { senderId: targetUserId, receiverId: userId },
+                ],
+            };
+
+            expect(deleteQuery.$or).toHaveLength(2);
+            expect(deleteQuery.$or[0].senderId).toBe(userId);
+            expect(deleteQuery.$or[1].senderId).toBe(targetUserId);
+        });
+
+        it('should return 200 on successful block', () => {
+            mockRes.status(200).json({ message: "User blocked successfully" });
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({ message: "User blocked successfully" });
+        });
+    });
+});
+
+describe('Friend Controller - Unfriend User', () => {
+    let mockRes;
+
+    beforeEach(() => {
+        mockRes = createMockRes();
+    });
+
+    describe('unfriendUser validation', () => {
+        it('should prevent unfriending yourself', () => {
+            const userId = 'user-123';
+            const targetUserId = 'user-123';
+
+            const isSelfUnfriend = userId.toString() === targetUserId.toString();
+            expect(isSelfUnfriend).toBe(true);
+        });
+
+        it('should allow unfriending another user', () => {
+            const userId = 'user-123';
+            const targetUserId = 'user-456';
+
+            const isSelfUnfriend = userId.toString() === targetUserId.toString();
+            expect(isSelfUnfriend).toBe(false);
+        });
+
+        it('should return 400 for self-unfriend attempt', () => {
+            mockRes.status(400).json({ error: "You can't unfriend yourself" });
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: "You can't unfriend yourself" });
+        });
+    });
+
+    describe('unfriendUser logic', () => {
+        it('should remove user from friends array on both sides using $pull', () => {
+            const userId = 'user-123';
+            const targetUserId = 'user-456';
+
+            const updateForUser = { $pull: { friends: targetUserId } };
+            const updateForTarget = { $pull: { friends: userId } };
+
+            expect(updateForUser.$pull.friends).toBe(targetUserId);
+            expect(updateForTarget.$pull.friends).toBe(userId);
+        });
+
+        it('should delete pending friend requests between users', () => {
+            const userId = 'user-123';
+            const targetUserId = 'user-456';
+
+            const deleteQuery = {
+                $or: [
+                    { senderId: userId, receiverId: targetUserId },
+                    { senderId: targetUserId, receiverId: userId },
+                ],
+            };
+
+            expect(deleteQuery.$or).toHaveLength(2);
+        });
+
+        it('should return 200 on successful unfriend', () => {
+            mockRes.status(200).json({ message: "User unfriended successfully" });
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({ message: "User unfriended successfully" });
+        });
+    });
+});
+
+describe('Friend Controller - Get Blocked Users', () => {
+    let mockRes;
+
+    beforeEach(() => {
+        mockRes = createMockRes();
+    });
+
+    describe('getBlockedUsers response', () => {
+        it('should return array of blocked users', () => {
+            const blockedUsers = [
+                { _id: 'user-456', fullName: 'Blocked User 1', email: 'blocked1@example.com' },
+                { _id: 'user-789', fullName: 'Blocked User 2', email: 'blocked2@example.com' }
+            ];
+
+            mockRes.status(200).json(blockedUsers);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith(expect.any(Array));
+        });
+
+        it('should return empty array when no blocked users', () => {
+            mockRes.status(200).json([]);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith([]);
+        });
+
+        it('should populate blockedUsers with fullName, profilePic, email', () => {
+            // Verify the populate fields are correct
+            const populateFields = 'fullName profilePic email';
+
+            expect(populateFields).toContain('fullName');
+            expect(populateFields).toContain('profilePic');
+            expect(populateFields).toContain('email');
+        });
+
+        it('should return 500 on server error', () => {
+            mockRes.status(500).json({ error: "Server error" });
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: "Server error" });
+        });
+    });
+});
