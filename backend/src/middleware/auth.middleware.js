@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import User from '../models/user.model.js';
-import { generateTempToken } from '../lib/utils.js';
+import { generateTempToken, sanitizeForLogging } from '../lib/utils.js';
 
 dotenv.config();
 
@@ -13,7 +13,18 @@ export const protectRoute = async (req, res, next) => {
       return res.status(401).json({ message: 'No token provided, authorization denied.' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (jwtError) {
+      if (jwtError instanceof jwt.TokenExpiredError) {
+        return res.status(401).json({ message: 'Token has expired.' });
+      }
+      if (jwtError instanceof jwt.JsonWebTokenError) {
+        return res.status(401).json({ message: 'Invalid token format.' });
+      }
+      return res.status(401).json({ message: 'Token verification failed.' });
+    }
 
     if (!decoded || !decoded.id) {
       return res.status(401).json({ message: 'Token is not valid.' });
@@ -38,6 +49,8 @@ export const protectRoute = async (req, res, next) => {
 
     next()
   } catch (error) {
-    return res.status(500).json({ message: 'Token verification failed.' });
+    const sanitizedError = sanitizeForLogging(error);
+    console.error("Token verification error:", sanitizedError);
+    return res.status(401).json({ message: 'Token verification failed.' });
   }
 }

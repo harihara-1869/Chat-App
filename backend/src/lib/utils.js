@@ -47,3 +47,50 @@ export const verifyTempToken = (token) => {
     return null;
   }
 };
+
+/**
+ * Sanitize user input before logging to prevent log injection attacks
+ * and sensitive data exposure.
+ * 
+ * @param {any} input - The input to sanitize
+ * @returns {string} - Sanitized string safe for logging
+ */
+export const sanitizeForLogging = (input) => {
+  if (input === null || input === undefined) {
+    return '[null/undefined]';
+  }
+
+  if (typeof input === 'object') {
+    // For Error objects, extract safe properties only
+    if (input instanceof Error) {
+      return `[Error: ${input.name}]`;
+    }
+    
+    // For objects, recursively sanitize and filter sensitive fields
+    const sensitiveFields = [
+      'password', 'token', 'secret', 'key', 'authorization', 
+      'cookie', 'jwt', 'private', 'credential', 'ssn', 'credit'
+    ];
+    
+    const sanitized = {};
+    for (const [key, value] of Object.entries(input)) {
+      const lowerKey = key.toLowerCase();
+      if (sensitiveFields.some(field => lowerKey.includes(field))) {
+        sanitized[key] = '[REDACTED]';
+      } else {
+        sanitized[key] = sanitizeForLogging(value);
+      }
+    }
+    return JSON.stringify(sanitized);
+  }
+
+  if (typeof input === 'string') {
+    // Remove potential log injection attempts (newlines in log context)
+    // Allow unicode but remove control characters that could manipulate logs
+    return input
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+      .slice(0, 1000); // Limit length to prevent DoS
+  }
+
+  return String(input).slice(0, 1000);
+};

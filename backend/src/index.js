@@ -20,6 +20,22 @@ import { flagOldSignedPreKeysForRotation } from './controllers/key.controller.js
 import cron from 'node-cron';
 dotenv.config();
 
+// Validate required environment variables at startup
+const REQUIRED_ENV_VARS = ['JWT_SECRET', 'MONGO_URI'];
+const missingVars = REQUIRED_ENV_VARS.filter(
+  (varName) => !process.env[varName] || process.env[varName]!.trim() === ''
+);
+
+if (missingVars.length > 0) {
+  console.error(`Missing required environment variables: ${missingVars.join(', ')}`);
+  process.exit(1);
+}
+
+// Validate JWT_SECRET format (should be at least 32 bytes for HS256)
+if (process.env.JWT_SECRET!.length < 32) {
+  console.error('JWT_SECRET must be at least 32 characters for secure signing');
+  process.exit(1);
+}
 
 const PORT = process.env.PORT || 5001;
 

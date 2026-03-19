@@ -1,21 +1,37 @@
 import { Router } from 'express'
 import { protectRoute } from '../middleware/auth.middleware.js'
 import User from '../models/user.model.js'
+import { sanitizeForLogging } from '../lib/utils.js'
 
 const router = Router()
+
+const MIN_QUERY_LENGTH = 3;
+const MAX_QUERY_LENGTH = 100;
 
 router.get("/", protectRoute, async (req, res) => {
     try {
         const userId = req.user._id;
-        const { q } = req.query;
+        let { q } = req.query;
 
-        if (!q || q.trim().length < 3) {
+        // Handle array input (prevent bypass via ?q[]=...)
+        if (Array.isArray(q)) {
+            q = q[0];
+        }
+
+        if (!q || typeof q !== 'string' || q.trim().length < MIN_QUERY_LENGTH) {
             return res.status(400).json({
-                error: "Search query must be at least 3 characters",
+                error: `Search query must be at least ${MIN_QUERY_LENGTH} characters`,
             });
         }
 
         const trimmed = q.trim();
+
+        // Enforce maximum query length to prevent ReDoS and resource exhaustion
+        if (trimmed.length > MAX_QUERY_LENGTH) {
+            return res.status(400).json({
+                error: `Search query must not exceed ${MAX_QUERY_LENGTH} characters`,
+            });
+        }
 
         const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
 
@@ -41,7 +57,7 @@ router.get("/", protectRoute, async (req, res) => {
 
         res.status(200).json(users);
     } catch (error) {
-        console.error("Error in searchUsers:", error.message);
+        console.error("Error in searchUsers:", sanitizeForLogging(error));
         res.status(500).json({ error: "Internal server error" });
     }
 })

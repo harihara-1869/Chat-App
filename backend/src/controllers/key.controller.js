@@ -2,9 +2,34 @@ import User from "../models/user.model.js";
 import Device from "../models/device.model.js";
 import SignedPreKey from "../models/signedPreKey.model.js";
 import OneTimePreKey from "../models/oneTimePreKey.model.js";
+import { sanitizeForLogging } from "../lib/utils.js";
 
 const SIGNED_PREKEY_MAX_AGE_DAYS = 7;
 const SIGNED_PREKEY_GRACE_PERIOD_DAYS = 2;
+
+/**
+ * Validate base64 encoded string and check expected length
+ */
+const validateBase64Key = (key, expectedLength, keyType) => {
+  if (!key || typeof key !== 'string') {
+    return { valid: false, error: `${keyType} is required and must be a string` };
+  }
+  
+  // Basic base64 validation regex (includes padding)
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(key)) {
+    return { valid: false, error: `${keyType} contains invalid base64 characters` };
+  }
+  
+  try {
+    const buffer = Buffer.from(key, "base64");
+    if (buffer.length !== expectedLength) {
+      return { valid: false, error: `${keyType} has invalid length (expected ${expectedLength} bytes, got ${buffer.length})` };
+    }
+    return { valid: true, buffer };
+  } catch (err) {
+    return { valid: false, error: `${keyType} has invalid base64 encoding` };
+  }
+};
 
 /**
  * Upload a signed pre-key for the user's device.
@@ -19,14 +44,19 @@ export const uploadSignedPreKey = async (req, res) => {
             return res.status(400).json({ message: "keyId, publicKey, and signature are required" });
         }
 
-        const pubKeyBuffer = Buffer.from(publicKey, "base64");
-        if (pubKeyBuffer.length !== 33) {
-            return res.status(400).json({ message: "Invalid signed prekey length (expected 33 bytes)" });
+        // Validate keyId is a reasonable integer
+        if (!Number.isInteger(keyId) || keyId < 0 || keyId > 4294967295) {
+            return res.status(400).json({ message: "Invalid keyId (must be a non-negative 32-bit integer)" });
         }
 
-        const sigBuffer = Buffer.from(signature, "base64");
-        if (sigBuffer.length !== 64) {
-            return res.status(400).json({ message: "Invalid signature length" });
+        const pubKeyValidation = validateBase64Key(publicKey, 33, "publicKey");
+        if (!pubKeyValidation.valid) {
+            return res.status(400).json({ message: pubKeyValidation.error });
+        }
+
+        const sigValidation = validateBase64Key(signature, 64, "signature");
+        if (!sigValidation.valid) {
+            return res.status(400).json({ message: sigValidation.error });
         }
 
         const device = await Device.findOne({ userId, deviceId });
@@ -58,7 +88,7 @@ export const uploadSignedPreKey = async (req, res) => {
 
         res.status(200).json({ message: "Signed pre-key uploaded successfully" });
     } catch (error) {
-        console.error("Error in uploadSignedPreKey:", error);
+        console.error("Error in uploadSignedPreKey:", sanitizeForLogging(error));
         res.status(500).json({ message: "Internal server error" });
     }
 };
@@ -75,9 +105,13 @@ export const rotateSignedPreKey = async (req, res) => {
             return res.status(400).json({ message: "keyId, publicKey, and signature are required" });
         }
 
-        const pubKeyBuffer = Buffer.from(publicKey, "base64");
-        if (pubKeyBuffer.length !== 33) {
-            return res.status(400).json({ message: "Invalid signed prekey length (expected 33 bytes)" });
+        if (!Number.isInteger(keyId) || keyId < 0 || keyId > 4294967295) {
+            return res.status(400).json({ message: "Invalid keyId (must be a non-negative 32-bit integer)" });
+        }
+
+        const pubKeyValidation = validateBase64Key(publicKey, 33, "publicKey");
+        if (!pubKeyValidation.valid) {
+            return res.status(400).json({ message: pubKeyValidation.error });
         }
 
         const device = await Device.findOne({ userId, deviceId });
@@ -106,7 +140,7 @@ export const rotateSignedPreKey = async (req, res) => {
 
         res.status(200).json({ message: "Signed pre-key rotated successfully" });
     } catch (error) {
-        console.error("Error in rotateSignedPreKey:", error);
+        console.error("Error in rotateSignedPreKey:", sanitizeForLogging(error));
         res.status(500).json({ message: "Internal server error" });
     }
 };
@@ -127,23 +161,50 @@ export const uploadOneTimePreKey = async (req, res) => {
             return res.status(400).json({ message: "Must provide 1-100 one-time pre-keys" });
         }
 
+        // Validate all keys before inserting
+        const validatedKeys = [];
+        for (let i = 0; i < setOfOneTimePreKeys.length; i++) {
+            const key = setOfOneTimePreKeys[i];
+            
+            if (!key || typeof key !== 'object') {
+                return res.status(400).json({ 
+                    message: `Invalid key at index ${i}: must be an object with keyId and publicKey`
+                });
+            }
+
+            if (!Number.isInteger(key.keyId) || key.keyId < 0 || key.keyId > 4294967295) {
+                return res.status(400).json({ 
+                    message: `Invalid keyId at index ${i} (must be a non-negative 32-bit integer)`
+                });
+            }
+
+            const pubKeyValidation = validateBase64Key(key.publicKey, 33, `publicKey at index ${i}`);
+            if (!pubKeyValidation.valid) {
+                return res.status(400).json({ message: pubKeyValidation.error });
+            }
+
+            validatedKeys.push({
+                userId,
+                deviceId,
+                keyId: key.keyId,
+                publicKey: key.publicKey,
+            });
+        }
+
         const device = await Device.findOne({ userId, deviceId });
         if (!device) {
             return res.status(404).json({ message: "Device not found. Register a device first." });
         }
 
-        await OneTimePreKey.insertMany(
-            setOfOneTimePreKeys.map(key => ({
-                userId,
-                deviceId,
-                keyId: key.keyId,
-                publicKey: key.publicKey,
-            }))
-        );
+        await OneTimePreKey.insertMany(validatedKeys);
 
         res.status(200).json({ message: "One-time pre-keys uploaded successfully" });
     } catch (error) {
-        console.error("Error in uploadOneTimePreKey:", error);
+        // Check for duplicate key error
+        if (error.code === 11000) {
+            return res.status(400).json({ message: "One or more pre-keys already exist" });
+        }
+        console.error("Error in uploadOneTimePreKey:", sanitizeForLogging(error));
         res.status(500).json({ message: "Internal server error" });
     }
 };
@@ -191,7 +252,7 @@ export const getPreKeyBundle = async (req, res) => {
                 : null,
         });
     } catch (error) {
-        console.error("Error in getPreKeyBundle:", error);
+        console.error("Error in getPreKeyBundle:", sanitizeForLogging(error));
         res.status(500).json({ message: "Internal server error" });
     }
 };
@@ -217,7 +278,7 @@ export const getPreKeyCount = async (req, res) => {
 
         res.status(200).json({ count, deviceId });
     } catch (error) {
-        console.error("Error in getPreKeyCount:", error);
+        console.error("Error in getPreKeyCount:", sanitizeForLogging(error));
         res.status(500).json({ message: "Internal server error" });
     }
 };
@@ -261,6 +322,6 @@ export const flagOldSignedPreKeysForRotation = async () => {
         }
 
     } catch (error) {
-        console.error("Error in flagOldSignedPreKeysForRotation:", error);
+        console.error("Error in flagOldSignedPreKeysForRotation:", sanitizeForLogging(error));
     }
 };

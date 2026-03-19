@@ -3,6 +3,31 @@ import Device from "../models/device.model.js";
 import SignedPreKey from "../models/signedPreKey.model.js";
 import OneTimePreKey from "../models/oneTimePreKey.model.js";
 import Session from "../models/session.model.js";
+import { sanitizeForLogging } from "../lib/utils.js";
+
+/**
+ * Validate base64 encoded identity key
+ */
+const validateIdentityKey = (key) => {
+  if (!key || typeof key !== 'string') {
+    return { valid: false, error: "identityPublicKey is required and must be a string" };
+  }
+  
+  // Basic base64 validation
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(key)) {
+    return { valid: false, error: "identityPublicKey contains invalid base64 characters" };
+  }
+  
+  try {
+    const buffer = Buffer.from(key, "base64");
+    if (buffer.length !== 33) {
+      return { valid: false, error: `identityPublicKey has invalid length (expected 33 bytes, got ${buffer.length})` };
+    }
+    return { valid: true, buffer };
+  } catch (err) {
+    return { valid: false, error: "identityPublicKey has invalid base64 encoding" };
+  }
+};
 
 /**
  * Register or replace the user's device.
@@ -20,23 +45,22 @@ export const registerDevice = async (req, res) => {
             });
         }
 
-        // Validate identity key format
-        let keyBuffer;
-        try {
-            keyBuffer = Buffer.from(identityPublicKey, "base64");
-        } catch (err) {
-            return res.status(400).json({ message: "Invalid base64 format" });
+        // Validate registrationId
+        if (!Number.isInteger(registrationId) || registrationId < 1 || registrationId > 16380) {
+            return res.status(400).json({
+                message: "registrationId must be an integer between 1 and 16380",
+            });
         }
 
-        if (keyBuffer.length !== 33) {
-            return res.status(400).json({
-                message: "Invalid identity key length (expected 33 bytes for libsignal)",
-            });
+        // Validate identity key format
+        const keyValidation = validateIdentityKey(identityPublicKey);
+        if (!keyValidation.valid) {
+            return res.status(400).json({ message: keyValidation.error });
         }
 
         const fingerprint = crypto
             .createHash("sha256")
-            .update(keyBuffer)
+            .update(keyValidation.buffer)
             .digest("hex");
 
         // Single-device mode: delete existing device + keys
@@ -75,7 +99,7 @@ export const registerDevice = async (req, res) => {
             registrationId: device.registrationId,
         });
     } catch (error) {
-        console.error("Error in registerDevice:", error);
+        console.error("Error in registerDevice:", sanitizeForLogging(error));
         res.status(500).json({ message: "Internal server error" });
     }
 };
@@ -108,7 +132,7 @@ export const removeDevice = async (req, res) => {
 
         res.status(200).json({ message: "Device removed successfully" });
     } catch (error) {
-        console.error("Error in removeDevice:", error);
+        console.error("Error in removeDevice:", sanitizeForLogging(error));
         res.status(500).json({ message: "Internal server error" });
     }
 };
@@ -130,7 +154,7 @@ export const getMyDevice = async (req, res) => {
 
         res.status(200).json(device);
     } catch (error) {
-        console.error("Error in getMyDevice:", error);
+        console.error("Error in getMyDevice:", sanitizeForLogging(error));
         res.status(500).json({ message: "Internal server error" });
     }
 };
@@ -157,7 +181,7 @@ export const saveFcmToken = async (req, res) => {
 
         res.status(200).json({ message: "FCM token saved successfully" });
     } catch (error) {
-        console.error("Error in saveFcmToken:", error);
+        console.error("Error in saveFcmToken:", sanitizeForLogging(error));
         res.status(500).json({ message: "Internal server error" });
     }
 };
