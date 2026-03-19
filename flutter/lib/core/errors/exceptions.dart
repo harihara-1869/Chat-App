@@ -1,3 +1,5 @@
+library;
+
 /// Custom exceptions for the application
 
 class ServerException implements Exception {

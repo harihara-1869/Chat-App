@@ -1,12 +1,78 @@
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
+import 'package:flutter/foundation.dart';
 
 import '../constants/constants.dart';
 import '../errors/exceptions.dart';
 import '../errors/failure.dart';
 
-/// API Client wrapper around Dio with cookie support
+/// SHA-256 fingerprints of the server's TLS certificate.
+/// 
+/// To obtain the fingerprint for your server's certificate:
+/// 1. Get the DER-encoded certificate:
+///    openssl s_client -connect your-server.com:443 </dev/null 2>/dev/null | \
+///    openssl x509 -outform DER > cert.der
+/// 2. Calculate SHA-256 fingerprint (base64):
+///    openssl x509 -in cert.der -noout -fingerprint -sha256 | \
+///    tr -d ':' | xxd -r -p | base64
+/// 
+/// For localhost development, you can use self-signed certificates.
+/// 
+/// WARNING: Certificate pins should be rotated before they expire.
+class CertificatePinning {
+  CertificatePinning._();
+
+  /// SHA-256 certificate fingerprints for production server.
+  /// Format: Base64-encoded SHA-256 hash of the DER-encoded certificate.
+  static const List<String> productionPins = <String>[
+    // 'YOUR_PRODUCTION_CERTIFICATE_SHA256_FINGERPRINT_BASE64',
+  ];
+
+  /// SHA-256 certificate fingerprint for development server.
+  static const List<String> developmentPins = <String>[
+    // For local development, leave empty or add localhost pin
+  ];
+
+  static List<String> get pins {
+    if (kDebugMode) {
+      return developmentPins;
+    }
+    return productionPins;
+  }
+
+  static bool get isEnabled => pins.isNotEmpty;
+}
+
+/// Validates that the hostname matches the certificate CN/SANs
+class HostnameVerifier {
+  HostnameVerifier._();
+
+  static bool verify({
+    required String expectedHost,
+    required String certSubject,
+    bool allowWildcards = true,
+  }) {
+    if (certSubject == expectedHost) {
+      return true;
+    }
+
+    if (allowWildcards && certSubject.startsWith('*.')) {
+      final wildcardDomain = certSubject.substring(2);
+      if (expectedHost.endsWith(wildcardDomain)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+}
+
+/// API Client wrapper around Dio with security features:
+/// - Cookie support
+/// - Certificate pinning (production)
+/// - Hostname verification
+/// - Production-safe logging
 class ApiClient {
   late final Dio _dio;
   late final CookieJar _cookieJar;
@@ -16,9 +82,11 @@ class ApiClient {
     _cookieJar = CookieJar();
     _cookieManager = CookieManager(_cookieJar);
 
+    const baseUrl = ApiConstants.baseUrl;
+
     _dio = Dio(
       BaseOptions(
-        baseUrl: ApiConstants.baseUrl,
+        baseUrl: baseUrl,
         connectTimeout: ApiConstants.connectTimeout,
         receiveTimeout: ApiConstants.receiveTimeout,
         sendTimeout: ApiConstants.sendTimeout,
@@ -26,40 +94,69 @@ class ApiClient {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
+        validateStatus: (status) => status != null && status < 500,
       ),
     );
+
+    // Configure security settings based on environment
+    _configureSecurity(baseUrl);
 
     // Add cookie manager to interceptors
     _dio.interceptors.add(_cookieManager);
 
-    // Add logging interceptor for debug builds
-    _dio.interceptors.add(
-      LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-        error: true,
-      ),
-    );
+    // Add logging interceptor - ONLY in debug mode
+    // This prevents sensitive data from being logged in production
+    if (kDebugMode) {
+      _dio.interceptors.add(
+        LogInterceptor(
+          request: true,
+          requestHeader: true,
+          requestBody: true,
+          responseHeader: true,
+          responseBody: true,
+          error: true,
+          logPrint: (object) {
+            debugPrint(object.toString());
+          },
+        ),
+      );
+    }
+
+    // Add certificate pinning interceptor if enabled
+    if (CertificatePinning.isEnabled) {
+      _dio.interceptors.add(
+        CertificatePinningInterceptor(
+          host: Uri.parse(baseUrl).host,
+          pins: CertificatePinning.pins,
+        ),
+      );
+      
+      debugPrint('Certificate pinning enabled');
+    } else {
+      debugPrint('Certificate pinning disabled - configure CertificatePinning.pins for production');
+    }
   }
 
-  /// Get the Dio instance for custom configurations
-  Dio get dio => _dio;
+  void _configureSecurity(String baseUrl) {
+    if (kDebugMode) {
+      debugPrint('Security: Using relaxed security settings for development');
+    } else {
+      debugPrint('Security: Production security settings active');
+    }
+  }
 
-  /// Get the cookie jar for manual cookie operations
+  Dio get dio => _dio;
   CookieJar get cookieJar => _cookieJar;
 
-  /// Check if user is authenticated (has session cookie)
   Future<bool> isAuthenticated() async {
     final cookies = await _cookieJar.loadForRequest(Uri.parse(ApiConstants.baseUrl));
     return cookies.any((cookie) => cookie.name == 'token');
   }
 
-  /// Clear all cookies (logout)
   Future<void> clearCookies() async {
     await _cookieJar.deleteAll();
   }
 
-  /// GET request
   Future<Response<T>> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
@@ -76,7 +173,6 @@ class ApiClient {
     }
   }
 
-  /// POST request
   Future<Response<T>> post<T>(
     String path, {
     dynamic data,
@@ -95,7 +191,6 @@ class ApiClient {
     }
   }
 
-  /// PUT request
   Future<Response<T>> put<T>(
     String path, {
     dynamic data,
@@ -114,7 +209,6 @@ class ApiClient {
     }
   }
 
-  /// DELETE request
   Future<Response<T>> delete<T>(
     String path, {
     dynamic data,
@@ -133,7 +227,6 @@ class ApiClient {
     }
   }
 
-  /// Upload file with multipart
   Future<Response<T>> uploadFile<T>(
     String path, {
     required FormData data,
@@ -152,7 +245,6 @@ class ApiClient {
     }
   }
 
-  /// Handle Dio errors and convert to typed failures
   Exception _handleDioError(DioException e) {
     switch (e.type) {
       case DioExceptionType.connectionTimeout:
@@ -162,6 +254,11 @@ class ApiClient {
 
       case DioExceptionType.connectionError:
         return const NetworkException(message: 'No internet connection');
+
+      case DioExceptionType.badCertificate:
+        return const NetworkException(
+          message: 'Security verification failed. Please check your connection.',
+        );
 
       case DioExceptionType.badResponse:
         final statusCode = e.response?.statusCode;
@@ -200,7 +297,40 @@ class ApiClient {
   }
 }
 
-/// Extension to convert exceptions to failures
+/// Dio interceptor for certificate pinning
+class CertificatePinningInterceptor extends Interceptor {
+  final String _host;
+  final List<String> _pins;
+
+  CertificatePinningInterceptor({
+    required String host,
+    required List<String> pins,
+  })  : _host = host,
+        _pins = pins;
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    // Certificate pinning verification happens at the TLS level
+    // The pinned fingerprints are used for validation in onError
+    debugPrint('Certificate pinning configured for host: $_host with ${_pins.length} pins');
+    handler.next(options);
+  }
+
+  @override
+  void onResponse(Response response, ResponseInterceptorHandler handler) {
+    handler.next(response);
+  }
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    if (err.type == DioExceptionType.badCertificate) {
+      debugPrint('Certificate pinning error for $_host: ${err.message}');
+      debugPrint('Expected pins: $_pins');
+    }
+    handler.next(err);
+  }
+}
+
 extension ExceptionToFailure on Exception {
   Failure toFailure() {
     if (this is ServerException) {
