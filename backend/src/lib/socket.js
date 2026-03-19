@@ -8,12 +8,72 @@ import PendingEvent from "../models/pendingEvent.model.js";
 import redisClient from "./redis.js";
 import { createAdapter } from "@socket.io/redis-adapter";
 import { sendPushNotification, sendFriendRequestNotification, sendFriendAcceptedNotification } from "./firebase.js";
+import { sanitizeForLogging } from "./utils.js";
+import mongoose from "mongoose";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
+
+// Socket rate limiting configuration
+const RATE_LIMIT_WINDOW_MS = 10000; // 10 seconds
+const RATE_LIMIT_MAX_EVENTS = 100; // Max events per window
+const MESSAGE_RATE_LIMIT_MAX = 10; // Max messages per 10 seconds
+
+// In-memory rate limit tracking (for single instance)
+// In production, use Redis for multi-instance support
+const rateLimitMap = new Map();
+
+// Clean up old rate limit entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, data] of rateLimitMap.entries()) {
+    if (now - data.windowStart > RATE_LIMIT_WINDOW_MS * 2) {
+      rateLimitMap.delete(key);
+    }
+  }
+}, RATE_LIMIT_WINDOW_MS);
+
+/**
+ * Check if a socket event should be rate limited
+ * @param {string} socketId - The socket ID
+ * @param {string} eventName - The event name
+ * @param {number} maxEvents - Max events allowed in window
+ * @returns {object} - { allowed: boolean, remaining: number }
+ */
+const checkRateLimit = (socketId, eventName, maxEvents = RATE_LIMIT_MAX_EVENTS) => {
+  const key = `${socketId}:${eventName}`;
+  const now = Date.now();
+  
+  let data = rateLimitMap.get(key);
+  
+  if (!data || now - data.windowStart > RATE_LIMIT_WINDOW_MS) {
+    // Start new window
+    rateLimitMap.set(key, {
+      windowStart: now,
+      count: 1
+    });
+    return { allowed: true, remaining: maxEvents - 1 };
+  }
+  
+  if (data.count >= maxEvents) {
+    return { allowed: false, remaining: 0 };
+  }
+  
+  data.count++;
+  return { allowed: true, remaining: maxEvents - data.count };
+};
+
+/**
+ * Validate MongoDB ObjectId format
+ */
+const isValidObjectId = (id) => {
+  if (!id || typeof id !== 'string') return false;
+  return mongoose.Types.ObjectId.isValid(id) && 
+         new mongoose.Types.ObjectId(id).toString() === id;
+};
 
 // Try to set up Redis adapter, fall back to in-memory if unavailable
 let io;
@@ -172,10 +232,55 @@ io.on("connection", (socket) => {
     io.emit("getOnlineUsers", keys);
   });
 
-  // Handle message delivery acknowledgement
+  // Handle message delivery acknowledgement with validation
   socket.on("ackMessage", (data) => {
+    // Rate limit acknowledgement events
+    const ackRateLimit = checkRateLimit(socket.id, "ackMessage", MESSAGE_RATE_LIMIT_MAX * 2);
+    if (!ackRateLimit.allowed) {
+      console.warn(`Rate limit exceeded for ackMessage from ${socket.id}`);
+      socket.emit("rateLimitExceeded", { event: "ackMessage" });
+      return;
+    }
+
     const { messageId, status } = data;
-    console.log(`Message ${messageId} acknowledged as ${status}`);
+
+    // Validate messageId format (must be valid MongoDB ObjectId)
+    if (!isValidObjectId(messageId)) {
+      console.warn(`Invalid messageId format from ${socket.id}: ${sanitizeForLogging(messageId)}`);
+      socket.emit("error", { code: "INVALID_MESSAGE_ID", message: "Invalid messageId format" });
+      return;
+    }
+
+    // Validate status if provided
+    const validStatuses = ["delivered", "read", "failed"];
+    if (status && !validStatuses.includes(status)) {
+      console.warn(`Invalid status from ${socket.id}: ${sanitizeForLogging(status)}`);
+      socket.emit("error", { code: "INVALID_STATUS", message: "Invalid acknowledgement status" });
+      return;
+    }
+
+    console.log(`Message ${messageId} acknowledged as ${status || "received"} by user ${userId}`);
+    
+    // Emit acknowledgement confirmation to sender if online
+    // This would typically look up the original sender and emit to their socket
+  });
+
+  // Handle typing indicator with rate limiting
+  socket.on("typing", (data) => {
+    const rateLimit = checkRateLimit(socket.id, "typing");
+    if (!rateLimit.allowed) {
+      return; // Silently ignore excess typing events
+    }
+
+    const { conversationId, isTyping } = data;
+
+    // Validate conversationId if provided
+    if (conversationId && !isValidObjectId(conversationId)) {
+      return;
+    }
+
+    // Broadcast to relevant users
+    // Implementation depends on your conversation model
   });
 
   socket.on("disconnect", async () => {
