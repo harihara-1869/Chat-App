@@ -344,6 +344,47 @@ class FriendsListContent extends ConsumerWidget {
             const SliverToBoxAdapter(child: Divider()),
           ],
 
+          // Sent requests section
+          if (friendsState.sentRequests.isNotEmpty) ...[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'Sent Requests (${friendsState.sentRequests.length})',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final request = friendsState.sentRequests[index];
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundImage: request.receiverProfilePicture != null
+                          ? NetworkImage(request.receiverProfilePicture!)
+                          : null,
+                      child: request.receiverProfilePicture == null
+                          ? Text(request.receiverUsername[0].toUpperCase())
+                          : null,
+                    ),
+                    title: Text(request.receiverUsername),
+                    subtitle: const Text('Friend request sent'),
+                    trailing: const Chip(
+                      label: Text('Pending', style: TextStyle(color: Colors.white)),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                },
+                childCount: friendsState.sentRequests.length,
+              ),
+            ),
+            const SliverToBoxAdapter(child: Divider()),
+          ],
+
           // All friends section
           SliverToBoxAdapter(
             child: Padding(

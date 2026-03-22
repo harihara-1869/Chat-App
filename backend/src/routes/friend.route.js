@@ -5,6 +5,7 @@ import {
   friendRequest, 
   rejectFriendRequest, 
   getPendingRequests,
+  getSentRequests,
   blockUser,
   unfriendUser,
   getBlockedUsers
@@ -15,6 +16,8 @@ const router = express.Router()
 router.post("/request/:userId", protectRoute, friendRequest)
 
 router.get("/requests/pending", protectRoute, getPendingRequests)
+
+router.get("/requests/sent", protectRoute, getSentRequests)
 
 router.post("/accept/:requestId", protectRoute, acceptFriendRequest)
 

@@ -31,6 +31,17 @@ class FriendRepository {
     }
   }
 
+  /// Get sent friend requests
+  Future<List<FriendRequest>> getSentRequests() async {
+    try {
+      final response = await _apiClient.get('${ApiConstants.friend}/requests/sent');
+      final List<dynamic> data = response.data;
+      return data.map((json) => FriendRequest.fromJson(json)).toList();
+    } on ServerException {
+      rethrow;
+    }
+  }
+
   /// Send a friend request
   Future<void> sendFriendRequest(String userId) async {
     try {

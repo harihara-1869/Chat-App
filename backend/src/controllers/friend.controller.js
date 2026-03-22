@@ -202,6 +202,22 @@ export async function getPendingRequests(req, res) {
   }
 }
 
+export async function getSentRequests(req, res) {
+  try {
+    const userId = req.user._id;
+
+    const requests = await FriendRequest.find({
+      senderId: userId,
+      status: "pending"
+    }).populate("receiverId", "fullName profilePic email");
+
+    res.status(200).json(requests);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Server error" });
+  }
+}
+
 /**
  * Block a user - prevents messaging and friend requests
  */

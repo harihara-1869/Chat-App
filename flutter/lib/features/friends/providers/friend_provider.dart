@@ -16,12 +16,14 @@ final friendRepositoryProvider = Provider<FriendRepository>((ref) {
 class FriendsState {
   final List<Friend> friends;
   final List<FriendRequest> pendingRequests;
+  final List<FriendRequest> sentRequests;
   final bool isLoading;
   final String? error;
 
   const FriendsState({
     this.friends = const [],
     this.pendingRequests = const [],
+    this.sentRequests = const [],
     this.isLoading = false,
     this.error,
   });
@@ -29,12 +31,14 @@ class FriendsState {
   FriendsState copyWith({
     List<Friend>? friends,
     List<FriendRequest>? pendingRequests,
+    List<FriendRequest>? sentRequests,
     bool? isLoading,
     String? error,
   }) {
     return FriendsState(
       friends: friends ?? this.friends,
       pendingRequests: pendingRequests ?? this.pendingRequests,
+      sentRequests: sentRequests ?? this.sentRequests,
       isLoading: isLoading ?? this.isLoading,
       error: error,
     );
@@ -64,10 +68,12 @@ class FriendsNotifier extends StateNotifier<FriendsState> {
     try {
       final friends = await _friendRepository.getFriends();
       final pendingRequests = await _friendRepository.getPendingRequests();
+      final sentRequests = await _friendRepository.getSentRequests();
 
       state = state.copyWith(
         friends: friends,
         pendingRequests: pendingRequests,
+        sentRequests: sentRequests,
         isLoading: false,
       );
     } catch (e) {
@@ -93,11 +99,14 @@ class FriendsNotifier extends StateNotifier<FriendsState> {
     });
   }
 
-  Future<void> sendFriendRequest(String userId) async {
+  Future<bool> sendFriendRequest(String userId) async {
     try {
       await _friendRepository.sendFriendRequest(userId);
+      await _loadFriends();
+      return true;
     } catch (e) {
       state = state.copyWith(error: e.toString());
+      return false;
     }
   }
 

@@ -53,6 +53,8 @@ class FriendRequest extends Equatable {
   final String senderUsername;
   final String? senderProfilePicture;
   final String receiverId;
+  final String receiverUsername;
+  final String? receiverProfilePicture;
   final FriendRequestStatus status;
   final DateTime createdAt;
 
@@ -62,17 +64,33 @@ class FriendRequest extends Equatable {
     required this.senderUsername,
     this.senderProfilePicture,
     required this.receiverId,
+    required this.receiverUsername,
+    this.receiverProfilePicture,
     required this.status,
     required this.createdAt,
   });
 
   factory FriendRequest.fromJson(Map<String, dynamic> json) {
+    // Check if senderId is populated (Map) or just an ID (String)
+    final senderData = json['senderId'];
+    final senderId = senderData is Map ? senderData['_id'] as String : senderData as String;
+    final senderUsername = senderData is Map ? (senderData['fullName'] ?? 'Unknown User') as String : 'Unknown User';
+    final senderProfilePicture = senderData is Map ? (senderData['profilePic'] ?? senderData['profilePicture']) as String? : null;
+
+    // Check if receiverId is populated (Map) or just an ID (String)
+    final receiverData = json['receiverId'];
+    final receiverId = receiverData is Map ? receiverData['_id'] as String : receiverData as String;
+    final receiverUsername = receiverData is Map ? (receiverData['fullName'] ?? 'Unknown User') as String : 'Unknown User';
+    final receiverProfilePicture = receiverData is Map ? (receiverData['profilePic'] ?? receiverData['profilePicture']) as String? : null;
+
     return FriendRequest(
       id: json['_id'] as String,
-      senderId: json['senderId'] as String,
-      senderUsername: json['senderUsername'] as String,
-      senderProfilePicture: json['senderProfilePicture'] as String?,
-      receiverId: json['receiverId'] as String,
+      senderId: senderId,
+      senderUsername: senderUsername,
+      senderProfilePicture: senderProfilePicture,
+      receiverId: receiverId,
+      receiverUsername: receiverUsername,
+      receiverProfilePicture: receiverProfilePicture,
       status: FriendRequestStatus.fromString(json['status'] as String),
       createdAt: DateTime.parse(json['createdAt'] as String),
     );
@@ -85,6 +103,8 @@ class FriendRequest extends Equatable {
         senderUsername,
         senderProfilePicture,
         receiverId,
+        receiverUsername,
+        receiverProfilePicture,
         status,
         createdAt,
       ];

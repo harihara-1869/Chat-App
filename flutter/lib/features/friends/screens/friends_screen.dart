@@ -258,23 +258,41 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
   }
 
   Widget _buildAddButton(dynamic user) {
-    if (user.isFriend) {
+    final friendsState = ref.watch(friendsProvider);
+    
+    final isFriend = friendsState.friends.any((f) => f.id == user.id);
+    final hasSentRequest = friendsState.sentRequests.any((r) => r.receiverId == user.id);
+    final hasReceivedRequest = friendsState.pendingRequests.any((r) => r.senderId == user.id);
+
+    if (isFriend || user.isFriend) {
       return const Chip(
-        label: Text('Friend'),
+        label: Text('Friend', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.green,
       );
     }
 
-    if (user.hasPendingRequest) {
+    if (hasSentRequest || user.hasPendingRequest) {
       return const Chip(
-        label: Text('Pending'),
+        label: Text('Sent', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.orange,
       );
     }
 
+    if (hasReceivedRequest) {
+      return const Chip(
+        label: Text('Received', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.blue,
+      );
+    }
+
     return TextButton(
-      onPressed: () {
-        ref.read(friendsProvider.notifier).sendFriendRequest(user.id);
+      onPressed: () async {
+        final success = await ref.read(friendsProvider.notifier).sendFriendRequest(user.id);
+        if (success && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Friend request sent to ${user.username}')),
+          );
+        }
       },
       child: const Text('Add'),
     );
