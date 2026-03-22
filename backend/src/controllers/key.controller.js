@@ -2,6 +2,7 @@ import User from "../models/user.model.js";
 import Device from "../models/device.model.js";
 import SignedPreKey from "../models/signedPreKey.model.js";
 import OneTimePreKey from "../models/oneTimePreKey.model.js";
+import KyberPreKey from "../models/kyberPreKey.model.js";
 import { sanitizeForLogging } from "../lib/utils.js";
 import crypto from "crypto";
 
@@ -293,6 +294,82 @@ export const uploadOneTimePreKey = async (req, res) => {
 };
 
 /**
+ * Upload or rotate the active Kyber pre-key for the user's device.
+ */
+export const uploadKyberPreKey = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { keyId, publicKey, signature, deviceId = 1 } = req.body;
+
+        if (!keyId || !publicKey || !signature) {
+            return res.status(400).json({
+                message: "keyId, publicKey, and signature are required"
+            });
+        }
+
+        if (!Number.isInteger(keyId) || keyId < 0 || keyId > 4294967295) {
+            return res.status(400).json({
+                message: "Invalid keyId (must be a non-negative 32-bit integer)"
+            });
+        }
+
+        const pubKeyValidation = validateBase64Key(publicKey, 1568, "publicKey");
+        if (!pubKeyValidation.valid) {
+            return res.status(400).json({ message: pubKeyValidation.error });
+        }
+
+        const sigValidation = validateBase64Key(signature, 64, "signature");
+        if (!sigValidation.valid) {
+            return res.status(400).json({ message: sigValidation.error });
+        }
+
+        const device = await Device.findOne({ userId, deviceId });
+        if (!device) {
+            return res.status(404).json({
+                message: "Device not found. Register a device first."
+            });
+        }
+
+        const signatureVerification = verifySignedPreKeySignature(
+            device.identityPublicKey,
+            publicKey,
+            signature
+        );
+
+        if (!signatureVerification.valid) {
+            return res.status(400).json({
+                message: `Signature verification failed: ${signatureVerification.error}`
+            });
+        }
+
+        await KyberPreKey.updateMany(
+            { userId, deviceId, status: "active" },
+            {
+                status: "archived",
+                archivedAt: new Date()
+            }
+        );
+
+        await KyberPreKey.findOneAndUpdate(
+            { userId, deviceId },
+            {
+                keyId,
+                publicKey,
+                signature,
+                status: "active",
+                archivedAt: null
+            },
+            { upsert: true, new: true }
+        );
+
+        res.status(200).json({ message: "Kyber pre-key uploaded successfully" });
+    } catch (error) {
+        console.error("Error in uploadKyberPreKey:", sanitizeForLogging(error));
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+/**
  * Get a pre-key bundle for a specific user (and optionally device).
  * Consumes one one-time pre-key (marks it as used).
  */
@@ -312,6 +389,12 @@ export const getPreKeyBundle = async (req, res) => {
             return res.status(404).json({ message: "Signed pre-key not found or inactive" });
         }
 
+        const kyberPreKey = await KyberPreKey.findOne({
+            userId,
+            deviceId,
+            status: "active"
+        });
+
         const oneTimePreKey = await OneTimePreKey.findOneAndUpdate(
             { userId, deviceId, used: false },
             { $set: { used: true } },
@@ -327,6 +410,13 @@ export const getPreKeyBundle = async (req, res) => {
                 publicKey: signedPreKey.publicKey,
                 signature: signedPreKey.signature,
             },
+            kyberPreKey: kyberPreKey
+                ? {
+                    keyId: kyberPreKey.keyId,
+                    publicKey: kyberPreKey.publicKey,
+                    signature: kyberPreKey.signature,
+                }
+                : null,
             oneTimePreKey: oneTimePreKey
                 ? {
                     keyId: oneTimePreKey.keyId,

@@ -63,6 +63,28 @@ class KeyRepository {
     }
   }
 
+  /// Upload active Kyber pre-key for PQXDH session setup
+  Future<void> uploadKyberPreKey({
+    required int keyId,
+    required String publicKey,
+    required String signature,
+    int deviceId = 1,
+  }) async {
+    try {
+      await _apiClient.post(
+        '${ApiConstants.keys}/kyber',
+        data: {
+          'keyId': keyId,
+          'publicKey': publicKey,
+          'signature': signature,
+          'deviceId': deviceId,
+        },
+      );
+    } on ServerException {
+      rethrow;
+    }
+  }
+
   /// Upload one-time pre-keys to server
   Future<void> uploadOneTimePreKeys({
     required List<Map<String, dynamic>> preKeys,

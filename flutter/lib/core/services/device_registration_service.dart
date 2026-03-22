@@ -16,6 +16,7 @@ class DeviceRegistrationService {
   final int _deviceId = 1;
   static const int _oneTimePreKeyCount = 20;
   static const int _minOneTimePreKeys = 5;
+  static const Duration kyberPreKeyRotationInterval = Duration(days: 30);
 
   DeviceRegistrationService({
     required SecureKeyStore secureKeyStore,
@@ -30,8 +31,6 @@ class DeviceRegistrationService {
   }
 
   Future<void> register() async {
-    await LibSignal.init();
-
     final identityKeyPair = IdentityKeyPair.generate();
     final identityPrivateKey = PrivateKey.deserialize(
       bytes: identityKeyPair.privateKey.toList(),
@@ -68,14 +67,16 @@ class DeviceRegistrationService {
       );
     }
 
+    Map<String, dynamic>? kyberPreKeyResult;
     try {
-      final kyberPreKeyResult = await _generateKyberPreKey(
+      kyberPreKeyResult = await _generateKyberPreKey(
         identityPrivateKey,
-        1,
+        await _secureKeyStore.getNextKyberPreKeyId(),
       );
       if (kyberPreKeyResult != null) {
+        final kyberKeyId = kyberPreKeyResult['id'] as int;
         await _bundle.kyberPreKeyStore.storeKyberPreKey(
-          1,
+          kyberKeyId,
           kyberPreKeyResult['record'] as KyberPreKeyRecord,
         );
       }
@@ -102,6 +103,10 @@ class DeviceRegistrationService {
               })
           .toList(),
     );
+
+    if (kyberPreKeyResult != null) {
+      await _finalizeKyberPreKeyUpload(kyberPreKeyResult);
+    }
   }
 
   /// Check prekey count and refill if below threshold
@@ -111,19 +116,25 @@ class DeviceRegistrationService {
       final count = await _keyRepository.getPreKeyCount();
 
       if (count >= 10) {
+        await rotateKyberPreKeyIfNeeded();
         return true; // Sufficient keys
       }
 
       // Need to refill - generate new keys
       await replenishOneTimePreKeys();
+      await rotateKyberPreKeyIfNeeded();
       return true;
     } catch (e) {
       // First retry
       try {
         await Future.delayed(const Duration(seconds: 1));
         final count = await _keyRepository.getPreKeyCount();
-        if (count >= 10) return true;
+        if (count >= 10) {
+          await rotateKyberPreKeyIfNeeded();
+          return true;
+        }
         await replenishOneTimePreKeys();
+        await rotateKyberPreKeyIfNeeded();
         return true;
       } catch (retryError) {
         // Failed twice - surface non-blocking warning
@@ -166,6 +177,43 @@ class DeviceRegistrationService {
         .storeNextOneTimePreKeyId(storedNextId + _oneTimePreKeyCount);
   }
 
+  Future<void> rotateKyberPreKeyIfNeeded() async {
+    final lastRotatedAt = await _secureKeyStore.getKyberPreKeyRotatedAt();
+    if (!shouldRotateKyberPreKey(lastRotatedAt)) {
+      return;
+    }
+
+    final identityPrivateKey = await _getIdentityPrivateKey();
+    final nextKyberPreKeyId = await _secureKeyStore.getNextKyberPreKeyId();
+    final kyberPreKeyResult = await _generateKyberPreKey(
+      identityPrivateKey,
+      nextKyberPreKeyId,
+    );
+    if (kyberPreKeyResult == null) {
+      return;
+    }
+
+    await _bundle.kyberPreKeyStore.storeKyberPreKey(
+      nextKyberPreKeyId,
+      kyberPreKeyResult['record'] as KyberPreKeyRecord,
+    );
+    await _finalizeKyberPreKeyUpload(kyberPreKeyResult);
+    await _removeStaleLocalKyberPreKeys(nextKyberPreKeyId);
+  }
+
+  static bool shouldRotateKyberPreKey(
+    DateTime? lastRotatedAt, {
+    DateTime? now,
+    Duration maxAge = kyberPreKeyRotationInterval,
+  }) {
+    if (lastRotatedAt == null) {
+      return true;
+    }
+
+    final currentTime = now ?? DateTime.now();
+    return currentTime.difference(lastRotatedAt) >= maxAge;
+  }
+
   Future<PrivateKey> _getIdentityPrivateKey() async {
     final privateKeyBytes = await _secureKeyStore.getIdentityPrivateKey();
     return PrivateKey.deserialize(bytes: privateKeyBytes);
@@ -177,6 +225,30 @@ class DeviceRegistrationService {
 
   Future<int> _getNextOneTimePreKeyId() async {
     return await _secureKeyStore.getNextOneTimePreKeyId();
+  }
+
+  Future<void> _finalizeKyberPreKeyUpload(
+    Map<String, dynamic> kyberPreKeyResult,
+  ) async {
+    final kyberKeyId = kyberPreKeyResult['id'] as int;
+    await _keyRepository.uploadKyberPreKey(
+      keyId: kyberKeyId,
+      publicKey: kyberPreKeyResult['publicKey'] as String,
+      signature: kyberPreKeyResult['signature'] as String,
+    );
+    await _secureKeyStore.storeCurrentKyberPreKeyId(kyberKeyId);
+    await _secureKeyStore.storeNextKyberPreKeyId(kyberKeyId + 1);
+    await _secureKeyStore.storeKyberPreKeyRotatedAt(DateTime.now().toUtc());
+  }
+
+  Future<void> _removeStaleLocalKyberPreKeys(int activeKyberPreKeyId) async {
+    final allKyberPreKeyIds =
+        await _bundle.kyberPreKeyStore.getAllKyberPreKeyIds();
+    for (final keyId in allKyberPreKeyIds) {
+      if (keyId != activeKyberPreKeyId) {
+        await _bundle.kyberPreKeyStore.removeKyberPreKey(keyId);
+      }
+    }
   }
 
   Future<Map<String, dynamic>> _generateSignedPreKey(

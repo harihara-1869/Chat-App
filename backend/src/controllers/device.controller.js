@@ -2,6 +2,7 @@ import crypto from "crypto";
 import Device from "../models/device.model.js";
 import SignedPreKey from "../models/signedPreKey.model.js";
 import OneTimePreKey from "../models/oneTimePreKey.model.js";
+import KyberPreKey from "../models/kyberPreKey.model.js";
 import Session from "../models/session.model.js";
 import { sanitizeForLogging } from "../lib/utils.js";
 
@@ -70,6 +71,7 @@ export const registerDevice = async (req, res) => {
             await Promise.all([
                 SignedPreKey.deleteMany({ userId, deviceId: oldDeviceId }),
                 OneTimePreKey.deleteMany({ userId, deviceId: oldDeviceId }),
+                KyberPreKey.deleteMany({ userId, deviceId: oldDeviceId }),
                 Session.deleteMany({
                     $or: [
                         { userId, deviceId: oldDeviceId },
@@ -121,6 +123,7 @@ export const removeDevice = async (req, res) => {
         await Promise.all([
             SignedPreKey.deleteMany({ userId, deviceId }),
             OneTimePreKey.deleteMany({ userId, deviceId }),
+            KyberPreKey.deleteMany({ userId, deviceId }),
             Session.deleteMany({
                 $or: [
                     { userId, deviceId },

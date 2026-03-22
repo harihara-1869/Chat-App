@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:chat_app/core/signal/registration_id.dart';
+import 'package:chat_app/core/services/device_registration_service.dart';
 import 'package:chat_app/core/storage/database/app_database.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -42,6 +43,41 @@ void main() {
       final encoded = AppDatabase.encodeEncryptionKeyForPragma(key);
 
       expect(encoded, "x'000001'");
+    });
+  });
+
+  group('DeviceRegistrationService.shouldRotateKyberPreKey', () {
+    test('rotates when no prior rotation timestamp exists', () {
+      expect(
+        DeviceRegistrationService.shouldRotateKyberPreKey(null),
+        isTrue,
+      );
+    });
+
+    test('does not rotate before the configured interval', () {
+      final now = DateTime.utc(2026, 3, 22);
+      final lastRotatedAt = now.subtract(const Duration(days: 29));
+
+      expect(
+        DeviceRegistrationService.shouldRotateKyberPreKey(
+          lastRotatedAt,
+          now: now,
+        ),
+        isFalse,
+      );
+    });
+
+    test('rotates once the configured interval has elapsed', () {
+      final now = DateTime.utc(2026, 3, 22);
+      final lastRotatedAt = now.subtract(const Duration(days: 30));
+
+      expect(
+        DeviceRegistrationService.shouldRotateKyberPreKey(
+          lastRotatedAt,
+          now: now,
+        ),
+        isTrue,
+      );
     });
   });
 }

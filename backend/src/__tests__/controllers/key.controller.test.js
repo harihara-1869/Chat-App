@@ -1,6 +1,7 @@
 /**
  * Key Controller Unit Tests
- * Tests for uploadSignedPreKey, uploadOneTimePreKey, getPreKeyBundle, getPreKeyCount
+ * Tests for uploadSignedPreKey, uploadKyberPreKey, uploadOneTimePreKey,
+ * getPreKeyBundle, getPreKeyCount
  *
  * Uses the simplified approach: testing validation logic, response formats,
  * and behavior patterns without complex ESM module mocking.
@@ -84,6 +85,38 @@ describe('Key Controller - uploadSignedPreKey Validation', () => {
         const deviceId = body.deviceId || 1;
 
         expect(deviceId).toBe(2);
+    });
+});
+
+describe('Key Controller - uploadKyberPreKey Validation', () => {
+    it('should require keyId, publicKey, and signature', () => {
+        const testCases = [
+            { publicKey: 'abc', signature: 'xyz' },
+            { keyId: 1, signature: 'xyz' },
+            { keyId: 1, publicKey: 'abc' },
+            {},
+        ];
+
+        testCases.forEach((body) => {
+            const isValid = !!body.keyId && !!body.publicKey && !!body.signature;
+            expect(isValid).toBe(false);
+        });
+    });
+
+    it('should validate Kyber public key is 1568 bytes', () => {
+        const validKey = Buffer.alloc(1568, 0x05);
+        const invalidKey = Buffer.alloc(33, 0x05);
+
+        expect(validKey.length).toBe(1568);
+        expect(invalidKey.length).not.toBe(1568);
+    });
+
+    it('should validate signature is 64 bytes', () => {
+        const validSig = Buffer.alloc(64, 0x01);
+        const invalidSig = Buffer.alloc(32, 0x01);
+
+        expect(validSig.length).toBe(64);
+        expect(invalidSig.length).not.toBe(64);
     });
 });
 
@@ -189,6 +222,11 @@ describe('Key Controller - getPreKeyBundle Logic', () => {
                 publicKey: 'base64-signed-prekey',
                 signature: 'base64-signature',
             },
+            kyberPreKey: {
+                keyId: 8,
+                publicKey: 'base64-kyber-prekey',
+                signature: 'base64-kyber-signature',
+            },
             oneTimePreKey: {
                 keyId: 42,
                 publicKey: 'base64-otk',
@@ -201,6 +239,9 @@ describe('Key Controller - getPreKeyBundle Logic', () => {
         expect(bundle.signedPreKey).toHaveProperty('keyId');
         expect(bundle.signedPreKey).toHaveProperty('publicKey');
         expect(bundle.signedPreKey).toHaveProperty('signature');
+        expect(bundle.kyberPreKey).toHaveProperty('keyId');
+        expect(bundle.kyberPreKey).toHaveProperty('publicKey');
+        expect(bundle.kyberPreKey).toHaveProperty('signature');
         expect(bundle.oneTimePreKey).toHaveProperty('keyId');
         expect(bundle.oneTimePreKey).toHaveProperty('publicKey');
     });
@@ -291,6 +332,14 @@ describe('Key Controller - Response Format', () => {
         });
     });
 
+    describe('uploadKyberPreKey response', () => {
+        it('should return 200 on success', () => {
+            mockRes.status(200).json({ message: 'Kyber pre-key uploaded successfully' });
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+    });
+
     describe('getPreKeyBundle response', () => {
         it('should return 200 with full bundle', () => {
             const bundle = {
@@ -298,6 +347,7 @@ describe('Key Controller - Response Format', () => {
                 registrationId: 1234,
                 deviceId: 1,
                 signedPreKey: { keyId: 1, publicKey: 'pk', signature: 'sig' },
+                kyberPreKey: { keyId: 8, publicKey: 'pqpk', signature: 'pqsig' },
                 oneTimePreKey: { keyId: 42, publicKey: 'otkpk' },
             };
 

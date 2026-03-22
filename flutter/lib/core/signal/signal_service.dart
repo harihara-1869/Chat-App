@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:libsignal/libsignal.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'identity_trust_service.dart';
 import 'registration_id.dart';
 import '../storage/signal_store_bundle.dart';
 import '../storage/session_store.dart';
@@ -28,9 +30,7 @@ class SignalService {
   DriftSignedPreKeyStore get signedPreKeyStore => _bundle.signedPreKeyStore;
   DriftKyberPreKeyStore get kyberPreKeyStore => _bundle.kyberPreKeyStore;
 
-  Future<void> initialize() async {
-    await LibSignal.init();
-  }
+  Future<void> initialize() async {}
 
   Future<void> loadIdentityFromBundle() async {
     final identityKeyPair = await identityKeyStore.getIdentityKeyPair();
@@ -144,8 +144,12 @@ class SignalService {
       message: signedPreKeyPublicKey,
     );
 
-    final kyberPreKeyId = 1;
-    final kyberPreKey = await kyberPreKeyStore.loadKyberPreKey(kyberPreKeyId);
+    final kyberPreKeyIds = await kyberPreKeyStore.getAllKyberPreKeyIds();
+    final kyberPreKeyId =
+        kyberPreKeyIds.isEmpty ? null : kyberPreKeyIds.reduce(max);
+    final kyberPreKey = kyberPreKeyId != null
+        ? await kyberPreKeyStore.loadKyberPreKey(kyberPreKeyId)
+        : null;
     final kyberPublicKey = kyberPreKey?.getPublicKey();
     final kyberSignature = kyberPreKey != null
         ? _identityPrivateKey.sign(message: kyberPublicKey!.serialize())
@@ -183,6 +187,33 @@ class SignalService {
       name: recipientId,
       deviceId: normalizedBundle['deviceId'] as int,
     );
+    final remoteIdentityKey = PublicKey.deserialize(
+      bytes: base64Decode(normalizedBundle['identityKey'] as String),
+    );
+    final isTrustedIdentity = await identityKeyStore.isTrustedIdentity(
+      recipientAddress,
+      remoteIdentityKey,
+      Direction.sending,
+    );
+    if (!isTrustedIdentity) {
+      throw const SignalException(
+        'Recipient identity changed and must be re-verified before sending',
+      );
+    }
+
+    if (normalizedBundle['kyberPreKeyId'] == null ||
+        normalizedBundle['kyberPreKeyPublic'] == null ||
+        normalizedBundle['kyberPreKeySignature'] == null) {
+      throw const SignalException(
+        'Recipient bundle is missing the required Kyber pre-key for PQXDH',
+      );
+    }
+
+    if (!verifyKyberPreKeySignature(normalizedBundle)) {
+      throw const SignalException(
+        'Invalid Kyber pre-key signature for recipient bundle',
+      );
+    }
 
     final bundle = PreKeyBundle(
       registrationId: normalizedBundle['registrationId'] as int,
@@ -197,7 +228,7 @@ class SignalService {
       signedPreKeySignature:
           base64Decode(normalizedBundle['signedPreKeySignature'] as String),
       identityKey: base64Decode(normalizedBundle['identityKey'] as String),
-      kyberPreKeyId: normalizedBundle['kyberPreKeyId'] as int? ?? 1,
+      kyberPreKeyId: normalizedBundle['kyberPreKeyId'] as int,
       kyberPreKeyPublic:
           base64Decode(normalizedBundle['kyberPreKeyPublic'] as String),
       kyberPreKeySignature:
@@ -215,11 +246,13 @@ class SignalService {
   }
 
   static Map<String, dynamic> normalizePreKeyBundle(
-      Map<String, dynamic> preKeyBundle) {
+    Map<String, dynamic> preKeyBundle,
+  ) {
     if (preKeyBundle['signedPreKey'] is Map<String, dynamic>) {
       final signedPreKey = preKeyBundle['signedPreKey'] as Map<String, dynamic>;
       final oneTimePreKey =
           preKeyBundle['oneTimePreKey'] as Map<String, dynamic>?;
+      final kyberPreKey = preKeyBundle['kyberPreKey'] as Map<String, dynamic>?;
       return {
         'registrationId': preKeyBundle['registrationId'],
         'deviceId': preKeyBundle['deviceId'],
@@ -229,13 +262,30 @@ class SignalService {
         'signedPreKeyPublic': signedPreKey['publicKey'],
         'signedPreKeySignature': signedPreKey['signature'],
         'identityKey': preKeyBundle['identityKey'],
-        'kyberPreKeyId': preKeyBundle['kyberPreKeyId'],
-        'kyberPreKeyPublic': preKeyBundle['kyberPreKeyPublic'],
-        'kyberPreKeySignature': preKeyBundle['kyberPreKeySignature'],
+        'kyberPreKeyId': kyberPreKey?['keyId'] ?? preKeyBundle['kyberPreKeyId'],
+        'kyberPreKeyPublic':
+            kyberPreKey?['publicKey'] ?? preKeyBundle['kyberPreKeyPublic'],
+        'kyberPreKeySignature':
+            kyberPreKey?['signature'] ?? preKeyBundle['kyberPreKeySignature'],
       };
     }
 
-    return Map<String, dynamic>.from(preKeyBundle);
+    return {
+      'registrationId': preKeyBundle['registrationId'],
+      'deviceId': preKeyBundle['deviceId'],
+      'preKeyId': preKeyBundle['preKeyId'],
+      'preKeyPublicKey':
+          preKeyBundle['preKeyPublicKey'] ?? preKeyBundle['preKeyPublic'],
+      'signedPreKeyId': preKeyBundle['signedPreKeyId'],
+      'signedPreKeyPublic':
+          preKeyBundle['signedPreKeyPublic'] ?? preKeyBundle['signedPreKey'],
+      'signedPreKeySignature': preKeyBundle['signedPreKeySignature'],
+      'identityKey': preKeyBundle['identityKey'],
+      'kyberPreKeyId': preKeyBundle['kyberPreKeyId'],
+      'kyberPreKeyPublic':
+          preKeyBundle['kyberPreKeyPublic'] ?? preKeyBundle['pqPreKeyPublic'],
+      'kyberPreKeySignature': preKeyBundle['kyberPreKeySignature'],
+    };
   }
 
   static bool verifySignedPreKeySignature(Map<String, dynamic> preKeyBundle) {
@@ -252,6 +302,25 @@ class SignalService {
     final identityKey = PublicKey.deserialize(bytes: identityKeyBytes);
     return identityKey.verify(
       message: signedPreKeyPublicBytes,
+      signature: signatureBytes,
+    );
+  }
+
+  static bool verifyKyberPreKeySignature(Map<String, dynamic> preKeyBundle) {
+    final normalizedBundle = normalizePreKeyBundle(preKeyBundle);
+    final identityKeyBytes = Uint8List.fromList(
+      base64Decode(normalizedBundle['identityKey'] as String),
+    );
+    final kyberPreKeyPublicBytes = Uint8List.fromList(
+      base64Decode(normalizedBundle['kyberPreKeyPublic'] as String),
+    );
+    final signatureBytes = Uint8List.fromList(
+      base64Decode(normalizedBundle['kyberPreKeySignature'] as String),
+    );
+
+    final identityKey = PublicKey.deserialize(bytes: identityKeyBytes);
+    return identityKey.verify(
+      message: kyberPreKeyPublicBytes,
       signature: signatureBytes,
     );
   }
@@ -309,6 +378,36 @@ class SignalService {
     return sessionStore.containsSession(address);
   }
 
+  Stream<IdentityChangeEvent> get onIdentityChange =>
+      identityKeyStore.onIdentityChange;
+
+  Future<RemoteIdentityTrustState?> getRemoteIdentityTrustState(
+    String remoteUserId, {
+    int deviceId = 1,
+  }) {
+    return identityKeyStore.getIdentityTrustState(
+      ProtocolAddress(name: remoteUserId, deviceId: deviceId),
+    );
+  }
+
+  Future<void> verifyRemoteIdentity(
+    String remoteUserId, {
+    int deviceId = 1,
+  }) {
+    return identityKeyStore.verifyCurrentIdentity(
+      ProtocolAddress(name: remoteUserId, deviceId: deviceId),
+    );
+  }
+
+  Future<SafetyNumber> generateSafetyNumber(
+    String remoteUserId, {
+    int deviceId = 1,
+  }) {
+    return identityKeyStore.generateSafetyNumber(
+      ProtocolAddress(name: remoteUserId, deviceId: deviceId),
+    );
+  }
+
   Future<void> deleteSession(String recipientId) async {
     final address = ProtocolAddress(name: recipientId, deviceId: 1);
     await sessionStore.deleteSession(address);
@@ -318,9 +417,7 @@ class SignalService {
     await sessionStore.clearAll();
   }
 
-  void dispose() {
-    LibSignal.cleanup();
-  }
+  void dispose() {}
 }
 
 class SignalException implements Exception {

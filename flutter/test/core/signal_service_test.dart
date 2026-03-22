@@ -65,6 +65,11 @@ void main() {
           'keyId': 9,
           'publicKey': 'prekey-public',
         },
+        'kyberPreKey': {
+          'keyId': 10,
+          'publicKey': 'kyber-public',
+          'signature': 'kyber-signature',
+        },
       });
 
       expect(normalized['registrationId'], 7);
@@ -75,6 +80,44 @@ void main() {
       expect(normalized['signedPreKeySignature'], 'signed-signature');
       expect(normalized['preKeyId'], 9);
       expect(normalized['preKeyPublicKey'], 'prekey-public');
+      expect(normalized['kyberPreKeyId'], 10);
+      expect(normalized['kyberPreKeyPublic'], 'kyber-public');
+      expect(normalized['kyberPreKeySignature'], 'kyber-signature');
+    });
+
+    test('accepts a valid Kyber pre-key signature', () {
+      final identityPrivateKey = PrivateKey.generate();
+      final kyberPublicKey = KyberKeyPair.generate().getPublicKey();
+      final signature = identityPrivateKey.sign(
+        message: kyberPublicKey.serialize(),
+      );
+
+      final isValid = SignalService.verifyKyberPreKeySignature({
+        'identityKey':
+            base64Encode(identityPrivateKey.getPublicKey().serialize()),
+        'kyberPreKeyPublic': base64Encode(kyberPublicKey.serialize()),
+        'kyberPreKeySignature': base64Encode(signature),
+      });
+
+      expect(isValid, isTrue);
+    });
+
+    test('rejects a forged Kyber pre-key signature', () {
+      final identityPrivateKey = PrivateKey.generate();
+      final attackerPrivateKey = PrivateKey.generate();
+      final kyberPublicKey = KyberKeyPair.generate().getPublicKey();
+      final forgedSignature = attackerPrivateKey.sign(
+        message: kyberPublicKey.serialize(),
+      );
+
+      final isValid = SignalService.verifyKyberPreKeySignature({
+        'identityKey':
+            base64Encode(identityPrivateKey.getPublicKey().serialize()),
+        'kyberPreKeyPublic': base64Encode(kyberPublicKey.serialize()),
+        'kyberPreKeySignature': base64Encode(forgedSignature),
+      });
+
+      expect(isValid, isFalse);
     });
   });
 }

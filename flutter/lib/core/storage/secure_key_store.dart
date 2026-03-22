@@ -11,6 +11,10 @@ const _identityPrivateKeyStorageKey = 'identity_private_key';
 const _identityPublicKeyStorageKey = 'identity_public_key';
 const _registrationIdStorageKey = 'registration_id';
 const _nextOneTimePreKeyIdStorageKey = 'next_onetime_prekey_id';
+const _nextKyberPreKeyIdStorageKey = 'next_kyber_prekey_id';
+const _currentKyberPreKeyIdStorageKey = 'current_kyber_prekey_id';
+const _kyberPreKeyRotatedAtStorageKey = 'kyber_prekey_rotated_at';
+const _remoteIdentityTrustPrefix = 'remote_identity_trust';
 
 class SecureKeyStore {
   final FlutterSecureStorage _storage;
@@ -94,6 +98,79 @@ class SecureKeyStore {
       return 0;
     }
     return int.parse(id);
+  }
+
+  Future<void> storeNextKyberPreKeyId(int id) async {
+    await _storage.write(
+      key: _nextKyberPreKeyIdStorageKey,
+      value: id.toString(),
+    );
+  }
+
+  Future<int> getNextKyberPreKeyId() async {
+    final id = await _storage.read(key: _nextKyberPreKeyIdStorageKey);
+    if (id == null) {
+      return 1;
+    }
+    return int.parse(id);
+  }
+
+  Future<void> storeCurrentKyberPreKeyId(int id) async {
+    await _storage.write(
+      key: _currentKyberPreKeyIdStorageKey,
+      value: id.toString(),
+    );
+  }
+
+  Future<int?> getCurrentKyberPreKeyId() async {
+    final id = await _storage.read(key: _currentKyberPreKeyIdStorageKey);
+    if (id == null) {
+      return null;
+    }
+    return int.parse(id);
+  }
+
+  Future<void> storeKyberPreKeyRotatedAt(DateTime rotatedAt) async {
+    await _storage.write(
+      key: _kyberPreKeyRotatedAtStorageKey,
+      value: rotatedAt.toIso8601String(),
+    );
+  }
+
+  Future<DateTime?> getKyberPreKeyRotatedAt() async {
+    final rotatedAt = await _storage.read(key: _kyberPreKeyRotatedAtStorageKey);
+    if (rotatedAt == null) {
+      return null;
+    }
+    return DateTime.parse(rotatedAt);
+  }
+
+  String _remoteIdentityTrustKey(String addressName, int deviceId) {
+    return '$_remoteIdentityTrustPrefix:$addressName:$deviceId';
+  }
+
+  Future<Map<String, dynamic>?> getRemoteIdentityTrustState(
+    String addressName,
+    int deviceId,
+  ) async {
+    final value = await _storage.read(
+      key: _remoteIdentityTrustKey(addressName, deviceId),
+    );
+    if (value == null) {
+      return null;
+    }
+    return jsonDecode(value) as Map<String, dynamic>;
+  }
+
+  Future<void> storeRemoteIdentityTrustState(
+    String addressName,
+    int deviceId,
+    Map<String, dynamic> state,
+  ) async {
+    await _storage.write(
+      key: _remoteIdentityTrustKey(addressName, deviceId),
+      value: jsonEncode(state),
+    );
   }
 
   Uint8List _generateSecureKey() {

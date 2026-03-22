@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:libsignal/libsignal.dart';
 
 import 'features/features.dart';
 import 'features/profile/providers/profile_provider.dart';
@@ -12,6 +13,7 @@ Future<void> _firebaseMessagingBackgroundHandler(dynamic message) async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await LibSignal.init();
 
   runApp(
     const ProviderScope(
@@ -111,7 +113,8 @@ class _ChatAppState extends ConsumerState<ChatApp> {
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: Color(0xFF6366F1), width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );
   }

@@ -230,12 +230,14 @@ describe('Device Controller - Single Device Enforcement Logic', () => {
         const cascadeTargets = [
             'SignedPreKey',
             'OneTimePreKey',
+            'KyberPreKey',
             'Session',
         ];
 
-        expect(cascadeTargets).toHaveLength(3);
+        expect(cascadeTargets).toHaveLength(4);
         expect(cascadeTargets).toContain('SignedPreKey');
         expect(cascadeTargets).toContain('OneTimePreKey');
+        expect(cascadeTargets).toContain('KyberPreKey');
         expect(cascadeTargets).toContain('Session');
     });
 

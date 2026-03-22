@@ -3,13 +3,19 @@ import 'package:libsignal/libsignal.dart';
 
 import 'database/app_database.dart';
 import 'database/database_provider.dart';
+import '../signal/identity_trust_service.dart';
 import 'secure_key_store.dart';
 
 class DriftIdentityKeyStore implements IdentityKeyStore {
   final AppDatabase _db;
   final SecureKeyStore _secureKeyStore;
+  final IdentityTrustService _identityTrustService;
 
-  DriftIdentityKeyStore(this._db, this._secureKeyStore);
+  DriftIdentityKeyStore(
+    this._db,
+    this._secureKeyStore,
+    this._identityTrustService,
+  );
 
   @override
   Future<IdentityKeyPair> getIdentityKeyPair() async {
@@ -32,12 +38,16 @@ class DriftIdentityKeyStore implements IdentityKeyStore {
 
   @override
   Future<bool> saveIdentity(ProtocolAddress address, PublicKey identityKey) async {
+    final observation = await _identityTrustService.observeIdentity(
+      address,
+      identityKey,
+    );
     await _db.insertIdentityKey(
       addressName: address.name(),
       deviceId: address.deviceId(),
       identityKeyBytes: identityKey.serialize(),
     );
-    return true;
+    return observation != IdentityObservationType.unchanged;
   }
 
   @override
@@ -46,14 +56,11 @@ class DriftIdentityKeyStore implements IdentityKeyStore {
     PublicKey identityKey,
     Direction direction,
   ) async {
-    final existingKey = await _db.getIdentityKey(address.name(), address.deviceId());
-    
-    if (existingKey == null) {
-      return true;
-    }
-
-    final existingPublicKey = PublicKey.deserialize(bytes: existingKey);
-    return existingPublicKey.serialize().toString() == identityKey.serialize().toString();
+    return _identityTrustService.isTrustedIdentity(
+      address,
+      identityKey,
+      direction,
+    );
   }
 
   @override
@@ -62,10 +69,33 @@ class DriftIdentityKeyStore implements IdentityKeyStore {
     if (keyBytes == null) return null;
     return PublicKey.deserialize(bytes: keyBytes);
   }
+
+  Stream<IdentityChangeEvent> get onIdentityChange => _identityTrustService.events;
+
+  Future<RemoteIdentityTrustState?> getIdentityTrustState(
+    ProtocolAddress address,
+  ) {
+    return _identityTrustService.getState(address);
+  }
+
+  Future<void> verifyCurrentIdentity(ProtocolAddress address) {
+    return _identityTrustService.verifyCurrentIdentity(address);
+  }
+
+  Future<SafetyNumber> generateSafetyNumber(
+    ProtocolAddress address, {
+    PublicKey? remoteIdentityKey,
+  }) {
+    return _identityTrustService.generateSafetyNumber(
+      address,
+      remoteIdentityKey: remoteIdentityKey,
+    );
+  }
 }
 
 final driftIdentityKeyStoreProvider = FutureProvider<DriftIdentityKeyStore>((ref) async {
   final db = await ref.watch(appDatabaseProvider.future);
   final secureKeyStore = ref.watch(secureKeyStoreProvider);
-  return DriftIdentityKeyStore(db, secureKeyStore);
+  final identityTrustService = ref.watch(identityTrustServiceProvider);
+  return DriftIdentityKeyStore(db, secureKeyStore, identityTrustService);
 });

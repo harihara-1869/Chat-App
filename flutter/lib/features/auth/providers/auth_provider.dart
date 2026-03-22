@@ -111,6 +111,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String email,
     required String password,
   }) async {
+    print('LOGIN: Starting login process');
     state = state.copyWith(status: AuthStatus.loading);
 
     try {
@@ -118,28 +119,37 @@ class AuthNotifier extends StateNotifier<AuthState> {
         email: email,
         password: password,
       );
+      print('LOGIN: Received API response successfully');
 
       // Connect socket for real-time features
       await _socketService.connect();
+      print('LOGIN: Socket connection initiated');
+      
       await _secureStorage.storeUserId(user.id);
+      print('LOGIN: Stored user ID securely');
 
       // Check and refill OneTimePreKeys if needed
       await _checkAndRefillPreKeys();
+      print('LOGIN: Checked PRE KEYS');
 
       // Check if policies need acceptance
       if (!user.acceptedPrivacyPolicy || !user.acceptedTermsAndConditions) {
+        print('LOGIN: User needs policy acceptance');
         state = state.copyWith(
           status: AuthStatus.needsPolicyAcceptance,
           user: user,
         );
       } else {
+        print('LOGIN: Setting state to authenticated');
         state = state.copyWith(
           status: AuthStatus.authenticated,
           user: user,
         );
       }
+      print('LOGIN: Login completely successful');
       return true;
     } catch (e) {
+      print('LOGIN: An error occurred: $e');
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
         errorMessage: e.toString(),
