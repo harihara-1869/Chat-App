@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:libsignal/libsignal.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'registration_id.dart';
 import '../storage/signal_store_bundle.dart';
 import '../storage/session_store.dart';
 import '../storage/identity_key_store.dart';
@@ -43,7 +44,7 @@ class SignalService {
   Future<Map<String, dynamic>> generateIdentityKeyPair() async {
     _identityPrivateKey = PrivateKey.generate();
     _identityPublicKey = _identityPrivateKey.getPublicKey();
-    _registrationId = DateTime.now().millisecondsSinceEpoch % 16380;
+    _registrationId = generateSecureRegistrationId();
 
     return {
       'privateKey': base64Encode(_identityPrivateKey.serialize()),

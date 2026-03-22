@@ -20,8 +20,8 @@ class Sessions extends Table {
 
   @override
   List<Set<Column>> get uniqueKeys => [
-    {addressName, deviceId}
-  ];
+        {addressName, deviceId}
+      ];
 }
 
 // Identity keys table - stores remote user's identity keys
@@ -34,8 +34,8 @@ class IdentityKeys extends Table {
 
   @override
   List<Set<Column>> get uniqueKeys => [
-    {addressName, deviceId}
-  ];
+        {addressName, deviceId}
+      ];
 }
 
 // One-time pre-keys table
@@ -74,8 +74,8 @@ class SkippedMessageKeys extends Table {
 
   @override
   List<Set<Column>> get uniqueKeys => [
-    {senderId, ratchetKey, messageIndex}
-  ];
+        {senderId, ratchetKey, messageIndex}
+      ];
 }
 
 // Chat messages table
@@ -110,21 +110,30 @@ class AppDatabase extends _$AppDatabase {
   static Future<AppDatabase> connectDatabase(Uint8List encryptionKey) async {
     final dir = await getApplicationDocumentsDirectory();
     final dbFile = File(p.join(dir.path, 'chat_app_encrypted.db'));
-    
-    final keyString = String.fromCharCodes(encryptionKey);
-    
+    final pragmaKey = encodeEncryptionKeyForPragma(encryptionKey);
+
     final executor = NativeDatabase(
       dbFile,
       setup: (database) {
-        database.execute("PRAGMA key = '$keyString'");
+        database.execute('PRAGMA key = "$pragmaKey"');
       },
     );
-    
+
     return AppDatabase._internal(executor);
   }
 
+  static String encodeEncryptionKeyForPragma(Uint8List encryptionKey) {
+    final buffer = StringBuffer("x'");
+    for (final byte in encryptionKey) {
+      buffer.write(byte.toRadixString(16).padLeft(2, '0'));
+    }
+    buffer.write("'");
+    return buffer.toString();
+  }
+
   /// Execute multiple operations in a single transaction
-  Future<T> runInTransaction<T>(Future<T> Function(AppDatabase db) action) async {
+  Future<T> runInTransaction<T>(
+      Future<T> Function(AppDatabase db) action) async {
     return await transaction(() => action(this));
   }
 
@@ -138,10 +147,11 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // ==================== Session Operations ====================
-  
+
   Future<Session?> getSession(String addressName, int deviceId) {
     return (select(sessions)
-      ..where((s) => s.addressName.equals(addressName) & s.deviceId.equals(deviceId)))
+          ..where((s) =>
+              s.addressName.equals(addressName) & s.deviceId.equals(deviceId)))
         .getSingleOrNull();
   }
 
@@ -170,17 +180,19 @@ class AppDatabase extends _$AppDatabase {
 
   Future<int> deleteSession(String addressName, int deviceId) {
     return (delete(sessions)
-      ..where((s) => s.addressName.equals(addressName) & s.deviceId.equals(deviceId)))
+          ..where((s) =>
+              s.addressName.equals(addressName) & s.deviceId.equals(deviceId)))
         .go();
   }
 
   Future<int> deleteAllSessionsForName(String addressName) {
-    return (delete(sessions)..where((s) => s.addressName.equals(addressName))).go();
+    return (delete(sessions)..where((s) => s.addressName.equals(addressName)))
+        .go();
   }
 
   Future<List<int>> getSubDeviceSessions(String addressName) async {
     final results = await (select(sessions)
-      ..where((s) => s.addressName.equals(addressName)))
+          ..where((s) => s.addressName.equals(addressName)))
         .get();
     return results.map((row) => row.deviceId).toList();
   }
@@ -206,14 +218,16 @@ class AppDatabase extends _$AppDatabase {
 
   Future<Uint8List?> getIdentityKey(String addressName, int deviceId) async {
     final result = await (select(identityKeys)
-      ..where((k) => k.addressName.equals(addressName) & k.deviceId.equals(deviceId)))
+          ..where((k) =>
+              k.addressName.equals(addressName) & k.deviceId.equals(deviceId)))
         .getSingleOrNull();
     return result?.identityKey;
   }
 
   Future<int> deleteIdentityKey(String addressName, int deviceId) {
     return (delete(identityKeys)
-      ..where((k) => k.addressName.equals(addressName) & k.deviceId.equals(deviceId)))
+          ..where((k) =>
+              k.addressName.equals(addressName) & k.deviceId.equals(deviceId)))
         .go();
   }
 
@@ -236,7 +250,7 @@ class AppDatabase extends _$AppDatabase {
 
   Future<Uint8List?> getPreKey(int preKeyId) async {
     final result = await (select(preKeys)
-      ..where((p) => p.preKeyId.equals(preKeyId)))
+          ..where((p) => p.preKeyId.equals(preKeyId)))
         .getSingleOrNull();
     return result?.record;
   }
@@ -269,7 +283,7 @@ class AppDatabase extends _$AppDatabase {
 
   Future<Uint8List?> getSignedPreKey(int signedPreKeyId) async {
     final result = await (select(signedPreKeys)
-      ..where((p) => p.signedPreKeyId.equals(signedPreKeyId)))
+          ..where((p) => p.signedPreKeyId.equals(signedPreKeyId)))
         .getSingleOrNull();
     return result?.record;
   }
@@ -280,7 +294,9 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<int> deleteSignedPreKey(int signedPreKeyId) {
-    return (delete(signedPreKeys)..where((p) => p.signedPreKeyId.equals(signedPreKeyId))).go();
+    return (delete(signedPreKeys)
+          ..where((p) => p.signedPreKeyId.equals(signedPreKeyId)))
+        .go();
   }
 
   // ==================== Kyber PreKey Operations ====================
@@ -303,14 +319,15 @@ class AppDatabase extends _$AppDatabase {
 
   Future<Uint8List?> getKyberPreKey(int kyberPreKeyId) async {
     final result = await (select(kyberPreKeys)
-      ..where((k) => k.kyberPreKeyId.equals(kyberPreKeyId) & k.isUsed.equals(false)))
+          ..where((k) =>
+              k.kyberPreKeyId.equals(kyberPreKeyId) & k.isUsed.equals(false)))
         .getSingleOrNull();
     return result?.record;
   }
 
   Future<int> markKyberPreKeyUsed(int kyberPreKeyId) {
     return (update(kyberPreKeys)
-      ..where((k) => k.kyberPreKeyId.equals(kyberPreKeyId)))
+          ..where((k) => k.kyberPreKeyId.equals(kyberPreKeyId)))
         .write(const KyberPreKeysCompanion(isUsed: Value(true)));
   }
 
@@ -320,13 +337,16 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<int> deleteKyberPreKey(int kyberPreKeyId) {
-    return (delete(kyberPreKeys)..where((k) => k.kyberPreKeyId.equals(kyberPreKeyId))).go();
+    return (delete(kyberPreKeys)
+          ..where((k) => k.kyberPreKeyId.equals(kyberPreKeyId)))
+        .go();
   }
 
   // ==================== Skipped Keys Operations ====================
 
   Future<int> insertSkippedKey(SkippedMessageKeysCompanion key) {
-    return into(skippedMessageKeys).insert(key, mode: InsertMode.insertOrIgnore);
+    return into(skippedMessageKeys)
+        .insert(key, mode: InsertMode.insertOrIgnore);
   }
 
   Future<SkippedMessageKey?> consumeSkippedKey({
@@ -335,17 +355,24 @@ class AppDatabase extends _$AppDatabase {
     required int messageIndex,
   }) async {
     final query = select(skippedMessageKeys)
-      ..where((k) => k.senderId.equals(senderId) & k.ratchetKey.equals(ratchetKey) & k.messageIndex.equals(messageIndex));
-    
+      ..where((k) =>
+          k.senderId.equals(senderId) &
+          k.ratchetKey.equals(ratchetKey) &
+          k.messageIndex.equals(messageIndex));
+
     final key = await query.getSingleOrNull();
     if (key != null) {
-      await (delete(skippedMessageKeys)..where((k) => k.id.equals(key.id))).go();
+      await (delete(skippedMessageKeys)..where((k) => k.id.equals(key.id)))
+          .go();
     }
     return key;
   }
 
   Future<int> purgeExpiredSkippedKeys(DateTime cutoffTime) {
-    return (delete(skippedMessageKeys)..where((k) => k.storedAt.isSmallerThanValue(cutoffTime.millisecondsSinceEpoch))).go();
+    return (delete(skippedMessageKeys)
+          ..where((k) =>
+              k.storedAt.isSmallerThanValue(cutoffTime.millisecondsSinceEpoch)))
+        .go();
   }
 
   // ==================== Message Operations ====================
@@ -356,17 +383,20 @@ class AppDatabase extends _$AppDatabase {
 
   Future<List<ChatMessage>> getMessages(String otherUserId) {
     return (select(chatMessages)
-      ..where((m) => m.otherUserId.equals(otherUserId))
-      ..orderBy([(m) => OrderingTerm.asc(m.createdAt)]))
+          ..where((m) => m.otherUserId.equals(otherUserId))
+          ..orderBy([(m) => OrderingTerm.asc(m.createdAt)]))
         .get();
   }
 
   Future<int> deleteMessage(String messageId) {
-    return (delete(chatMessages)..where((m) => m.messageId.equals(messageId))).go();
+    return (delete(chatMessages)..where((m) => m.messageId.equals(messageId)))
+        .go();
   }
 
   Future<int> clearMessages(String otherUserId) {
-    return (delete(chatMessages)..where((m) => m.otherUserId.equals(otherUserId))).go();
+    return (delete(chatMessages)
+          ..where((m) => m.otherUserId.equals(otherUserId)))
+        .go();
   }
 
   // ==================== Cleanup ====================

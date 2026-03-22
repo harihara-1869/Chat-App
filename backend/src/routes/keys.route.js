@@ -1,6 +1,7 @@
 import express from 'express';
 import { protectRoute } from '../middleware/auth.middleware.js';
 import { uploadSignedPreKey, uploadOneTimePreKey, getPreKeyBundle, getPreKeyCount, rotateSignedPreKey } from '../controllers/key.controller.js';
+import { strictRateLimiter } from "../middleware/rateLimit.middleware.js";
 
 const router = express.Router();
 
@@ -10,7 +11,7 @@ router.post("/rotate", protectRoute, rotateSignedPreKey);
 
 router.post("/one-time", protectRoute, uploadOneTimePreKey);
 
-router.get("/bundle/:userId", protectRoute, getPreKeyBundle);
+router.get("/bundle/:userId", protectRoute, strictRateLimiter, getPreKeyBundle);
 
 /**
  * Get the count of remaining one-time pre-keys.

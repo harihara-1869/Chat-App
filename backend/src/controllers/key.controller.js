@@ -12,24 +12,24 @@ const SIGNED_PREKEY_GRACE_PERIOD_DAYS = 2;
  * Validate base64 encoded string and check expected length
  */
 const validateBase64Key = (key, expectedLength, keyType) => {
-  if (!key || typeof key !== 'string') {
-    return { valid: false, error: `${keyType} is required and must be a string` };
-  }
-  
-  // Basic base64 validation regex (includes padding)
-  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(key)) {
-    return { valid: false, error: `${keyType} contains invalid base64 characters` };
-  }
-  
-  try {
-    const buffer = Buffer.from(key, "base64");
-    if (buffer.length !== expectedLength) {
-      return { valid: false, error: `${keyType} has invalid length (expected ${expectedLength} bytes, got ${buffer.length})` };
+    if (!key || typeof key !== 'string') {
+        return { valid: false, error: `${keyType} is required and must be a string` };
     }
-    return { valid: true, buffer };
-  } catch (err) {
-    return { valid: false, error: `${keyType} has invalid base64 encoding` };
-  }
+
+    // Basic base64 validation regex (includes padding)
+    if (!/^[A-Za-z0-9+/]*={0,2}$/.test(key)) {
+        return { valid: false, error: `${keyType} contains invalid base64 characters` };
+    }
+
+    try {
+        const buffer = Buffer.from(key, "base64");
+        if (buffer.length !== expectedLength) {
+            return { valid: false, error: `${keyType} has invalid length (expected ${expectedLength} bytes, got ${buffer.length})` };
+        }
+        return { valid: true, buffer };
+    } catch (err) {
+        return { valid: false, error: `${keyType} has invalid base64 encoding` };
+    }
 };
 
 /**
@@ -46,41 +46,41 @@ const validateBase64Key = (key, expectedLength, keyType) => {
  * corresponding key conversion.
  */
 const verifySignedPreKeySignature = (identityPublicKey, signedPreKeyPublic, signature) => {
-  try {
-    const identityBuffer = Buffer.from(identityPublicKey, "base64");
-    const preKeyBuffer = Buffer.from(signedPreKeyPublic, "base64");
-    const sigBuffer = Buffer.from(signature, "base64");
-
-    // Verify lengths
-    if (identityBuffer.length !== 33) {
-      return { valid: false, error: "Invalid identity public key length" };
-    }
-    if (preKeyBuffer.length !== 33) {
-      return { valid: false, error: "Invalid signed pre-key public length" };
-    }
-    if (sigBuffer.length !== 64) {
-      return { valid: false, error: "Invalid signature length" };
-    }
-
-    // Attempt Ed25519 signature verification
-    // Note: Node.js crypto doesn't directly support Ed25519 until v22.x
-    // For older Node versions, this would need a polyfill or external library
     try {
-      const isValid = crypto.verify(
-        "ed25519",
-        preKeyBuffer,
-        identityBuffer.slice(1), // Remove curve type byte (0x40) if present
-        sigBuffer
-      );
-      return { valid: isValid, error: isValid ? null : "Signature verification failed" };
-    } catch (verifyError) {
-      // If Ed25519 verify is not available, do basic format validation
-      console.warn("Ed25519 verify not available, skipping cryptographic verification");
-      return { valid: true, error: null, skipped: true };
+        const identityBuffer = Buffer.from(identityPublicKey, "base64");
+        const preKeyBuffer = Buffer.from(signedPreKeyPublic, "base64");
+        const sigBuffer = Buffer.from(signature, "base64");
+
+        // Verify lengths
+        if (identityBuffer.length !== 33) {
+            return { valid: false, error: "Invalid identity public key length" };
+        }
+        if (preKeyBuffer.length !== 33) {
+            return { valid: false, error: "Invalid signed pre-key public length" };
+        }
+        if (sigBuffer.length !== 64) {
+            return { valid: false, error: "Invalid signature length" };
+        }
+
+        // Attempt Ed25519 signature verification
+        // Note: Node.js crypto doesn't directly support Ed25519 until v22.x
+        // For older Node versions, this would need a polyfill or external library
+        try {
+            const isValid = crypto.verify(
+                "ed25519",
+                preKeyBuffer,
+                identityBuffer.slice(1), // Remove curve type byte (0x40) if present
+                sigBuffer
+            );
+            return { valid: isValid, error: isValid ? null : "Signature verification failed" };
+        } catch (verifyError) {
+            // If Ed25519 verify is not available, do basic format validation
+            console.warn("Ed25519 verify not available, skipping cryptographic verification");
+            return { valid: true, error: null, skipped: true };
+        }
+    } catch (error) {
+        return { valid: false, error: "Signature verification error" };
     }
-  } catch (error) {
-    return { valid: false, error: "Signature verification error" };
-  }
 };
 
 /**
@@ -118,21 +118,21 @@ export const uploadSignedPreKey = async (req, res) => {
 
         // Verify the signed pre-key is signed by the user's identity key
         const signatureVerification = verifySignedPreKeySignature(
-          device.identityPublicKey,
-          publicKey,
-          signature
+            device.identityPublicKey,
+            publicKey,
+            signature
         );
-        
+
         if (!signatureVerification.valid) {
-            return res.status(400).json({ 
-              message: `Signature verification failed: ${signatureVerification.error}` 
+            return res.status(400).json({
+                message: `Signature verification failed: ${signatureVerification.error}`
             });
         }
 
         // Archive existing active key if it exists (for rotation)
         await SignedPreKey.updateMany(
             { userId, deviceId, status: "active" },
-            { 
+            {
                 status: "archived",
                 archivedAt: new Date()
             }
@@ -141,9 +141,9 @@ export const uploadSignedPreKey = async (req, res) => {
         // Create new signed pre-key
         await SignedPreKey.findOneAndUpdate(
             { userId, deviceId },
-            { 
-                keyId, 
-                publicKey, 
+            {
+                keyId,
+                publicKey,
                 signature,
                 status: "active",
                 archivedAt: null
@@ -191,21 +191,21 @@ export const rotateSignedPreKey = async (req, res) => {
 
         // Verify the signed pre-key is signed by the user's identity key
         const signatureVerification = verifySignedPreKeySignature(
-          device.identityPublicKey,
-          publicKey,
-          signature
+            device.identityPublicKey,
+            publicKey,
+            signature
         );
-        
+
         if (!signatureVerification.valid) {
-            return res.status(400).json({ 
-              message: `Signature verification failed: ${signatureVerification.error}` 
+            return res.status(400).json({
+                message: `Signature verification failed: ${signatureVerification.error}`
             });
         }
 
         // Archive existing active key
         await SignedPreKey.updateMany(
             { userId, deviceId, status: "active" },
-            { 
+            {
                 status: "archived",
                 archivedAt: new Date()
             }
@@ -248,15 +248,15 @@ export const uploadOneTimePreKey = async (req, res) => {
         const validatedKeys = [];
         for (let i = 0; i < setOfOneTimePreKeys.length; i++) {
             const key = setOfOneTimePreKeys[i];
-            
+
             if (!key || typeof key !== 'object') {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     message: `Invalid key at index ${i}: must be an object with keyId and publicKey`
                 });
             }
 
             if (!Number.isInteger(key.keyId) || key.keyId < 0 || key.keyId > 4294967295) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     message: `Invalid keyId at index ${i} (must be a non-negative 32-bit integer)`
                 });
             }
@@ -378,11 +378,11 @@ export const flagOldSignedPreKeysForRotation = async () => {
 
         // Flag old active keys for rotation
         const result = await SignedPreKey.updateMany(
-            { 
+            {
                 status: "active",
                 createdAt: { $lt: thresholdDate }
             },
-            { 
+            {
                 status: "rotating"
             }
         );

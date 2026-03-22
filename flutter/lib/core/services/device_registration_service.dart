@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:libsignal/libsignal.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../signal/registration_id.dart';
 import '../providers/core_providers.dart';
 import '../storage/secure_key_store.dart';
 import '../storage/signal_store_bundle.dart';
@@ -94,10 +95,12 @@ class DeviceRegistrationService {
     );
 
     await _keyRepository.uploadOneTimePreKeys(
-      preKeys: oneTimePreKeys.map((k) => {
-        'keyId': k['id'],
-        'publicKey': k['publicKey'],
-      }).toList(),
+      preKeys: oneTimePreKeys
+          .map((k) => {
+                'keyId': k['id'],
+                'publicKey': k['publicKey'],
+              })
+          .toList(),
     );
   }
 
@@ -106,11 +109,11 @@ class DeviceRegistrationService {
   Future<bool> checkAndRefillPreKeys() async {
     try {
       final count = await _keyRepository.getPreKeyCount();
-      
+
       if (count >= 10) {
         return true; // Sufficient keys
       }
-      
+
       // Need to refill - generate new keys
       await replenishOneTimePreKeys();
       return true;
@@ -151,13 +154,16 @@ class DeviceRegistrationService {
     }
 
     await _keyRepository.uploadOneTimePreKeys(
-      preKeys: newKeys.map((k) => {
-        'keyId': k['id'],
-        'publicKey': k['publicKey'],
-      }).toList(),
+      preKeys: newKeys
+          .map((k) => {
+                'keyId': k['id'],
+                'publicKey': k['publicKey'],
+              })
+          .toList(),
     );
 
-    await _secureKeyStore.storeNextOneTimePreKeyId(storedNextId + _oneTimePreKeyCount);
+    await _secureKeyStore
+        .storeNextOneTimePreKeyId(storedNextId + _oneTimePreKeyCount);
   }
 
   Future<PrivateKey> _getIdentityPrivateKey() async {
@@ -166,7 +172,7 @@ class DeviceRegistrationService {
   }
 
   int _generateRegistrationId() {
-    return DateTime.now().millisecondsSinceEpoch % 16380 + 1;
+    return generateSecureRegistrationId();
   }
 
   Future<int> _getNextOneTimePreKeyId() async {
@@ -260,7 +266,8 @@ class DeviceRegistrationService {
   }
 }
 
-final deviceRegistrationServiceProvider = FutureProvider<DeviceRegistrationService>((ref) async {
+final deviceRegistrationServiceProvider =
+    FutureProvider<DeviceRegistrationService>((ref) async {
   final secureKeyStore = ref.watch(secureKeyStoreProvider);
   final bundle = await ref.watch(signalStoreBundleProvider.future);
   final apiClient = ref.watch(apiClientProvider);
