@@ -128,9 +128,9 @@ class UserSearchResult extends Equatable {
   factory UserSearchResult.fromJson(Map<String, dynamic> json) {
     return UserSearchResult(
       id: json['_id'] as String,
-      username: json['username'] as String,
-      email: json['email'] as String,
-      profilePicture: json['profilePicture'] as String?,
+      username: json['fullName'] as String? ?? json['username'] as String? ?? 'Unknown User',
+      email: json['email'] as String? ?? '',
+      profilePicture: json['profilePic'] as String? ?? json['profilePicture'] as String?,
       isFriend: json['isFriend'] as bool? ?? false,
       hasPendingRequest: json['hasPendingRequest'] as bool? ?? false,
     );

@@ -19,12 +19,14 @@ class AuthRepository {
       final response = await _apiClient.post(
         '${ApiConstants.auth}/signup',
         data: {
-          'username': username,
+          'fullName': username,
           'email': email,
           'password': password,
+          'privacyPolicy': true, // Mocking acceptance for now, or this should be passed in
+          'termsAndConditions': true,
         },
       );
-      return User.fromJson(response.data['user']);
+      return User.fromJson(response.data);
     } on ServerException {
       rethrow;
     }
@@ -43,7 +45,7 @@ class AuthRepository {
           'password': password,
         },
       );
-      return User.fromJson(response.data['user']);
+      return User.fromJson(response.data);
     } on ServerException {
       rethrow;
     }

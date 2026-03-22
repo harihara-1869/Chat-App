@@ -15,41 +15,64 @@ import '../../features/settings/screens/settings_screen.dart';
 import '../../features/settings/backup_screen.dart';
 import '../../features/settings/recovery_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
+import '../../features/profile/screens/privacy_policy_screen.dart';
+import '../../features/profile/screens/terms_conditions_screen.dart';
+
+class GoRouterNotifier extends ChangeNotifier {
+  final Ref _ref;
+
+  GoRouterNotifier(this._ref) {
+    _ref.listen<AuthState>(
+      authProvider,
+      (_, __) => notifyListeners(),
+    );
+  }
+}
 
 /// Router provider
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
+  final notifier = GoRouterNotifier(ref);
 
   return GoRouter(
     initialLocation: RoutePaths.splash,
     debugLogDiagnostics: true,
+    refreshListenable: notifier,
     redirect: (context, state) {
+      final authState = ref.read(authProvider);
+      
       final isAuthenticated = authState.status == AuthStatus.authenticated;
       final needsPolicy = authState.status == AuthStatus.needsPolicyAcceptance;
       final isLoggingIn = state.matchedLocation == RoutePaths.login;
       final isSigningUp = state.matchedLocation == RoutePaths.signup;
       final isOnSplash = state.matchedLocation == RoutePaths.splash;
+      final isLoading = authState.status == AuthStatus.loading || authState.status == AuthStatus.initial;
 
-      // If still loading, stay on splash
-      if (authState.status == AuthStatus.loading || authState.status == AuthStatus.initial) {
-        if (!isOnSplash) {
-          return RoutePaths.splash;
-        }
-        return null;
+      // If loading during app startup or deep links, force splash. 
+      // If loading during login or signup actions, stay on that screen.
+      if (isLoading) {
+        if (isOnSplash || isLoggingIn || isSigningUp) return null;
+        return RoutePaths.splash;
       }
 
+      final isAcceptingPolicies = state.matchedLocation == RoutePaths.acceptPolicies;
+
       // If needs policy acceptance, redirect to accept policies
-      if (needsPolicy && state.matchedLocation != RoutePaths.acceptPolicies) {
+      if (needsPolicy && !isAcceptingPolicies) {
         return RoutePaths.acceptPolicies;
       }
 
-      // If not authenticated, redirect to login
-      if (!isAuthenticated && !isLoggingIn && !isSigningUp) {
+      // If not authenticated and not on Auth screens, redirect to login
+      if (!isAuthenticated && !isLoggingIn && !isSigningUp && !isAcceptingPolicies && state.matchedLocation != RoutePaths.splash) {
         return RoutePaths.login;
       }
 
-      // If authenticated and on login/signup, redirect to home
-      if (isAuthenticated && (isLoggingIn || isSigningUp)) {
+      // If on splash screen and not authenticated, go to login
+      if (!isAuthenticated && isOnSplash && !isLoading) {
+        return RoutePaths.login;
+      }
+
+      // If authenticated and on auth-related screens, redirect to home
+      if (isAuthenticated && (isLoggingIn || isSigningUp || isOnSplash || state.matchedLocation == RoutePaths.acceptPolicies)) {
         return RoutePaths.home;
       }
 
@@ -106,6 +129,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const BackupScreen(),
           ),
         ],
+      ),
+      GoRoute(
+        path: RoutePaths.privacyPolicy,
+        name: RouteNames.privacyPolicy,
+        builder: (context, state) => const PrivacyPolicyScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.termsConditions,
+        name: RouteNames.termsConditions,
+        builder: (context, state) => const TermsConditionsScreen(),
       ),
       GoRoute(
         path: '/recovery',

@@ -4,7 +4,7 @@ class ApiConstants {
   ApiConstants._();
 
   /// Base URL for the API - update for production
-  static const String baseUrl = 'http://10.0.2.2:5001'; // Android emulator localhost
+  static const String baseUrl = 'http://10.0.2.2:5000'; // Android emulator localhost
   // static const String baseUrl = 'http://localhost:5001'; // iOS simulator
   // static const String baseUrl = 'https://your-production-api.com';
 

@@ -24,14 +24,16 @@ class User extends Equatable {
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['_id'] as String,
-      username: json['username'] as String,
-      email: json['email'] as String,
-      profilePicture: json['profilePicture'] as String?,
-      isVerified: json['isVerified'] as bool? ?? false,
-      acceptedPrivacyPolicy: json['acceptedPrivacyPolicy'] as bool? ?? false,
-      acceptedTermsAndConditions: json['acceptedTermsAndConditions'] as bool? ?? false,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      id: json['_id'] as String? ?? '',
+      username: (json['fullName'] ?? json['username'] ?? '') as String,
+      email: (json['email'] ?? '') as String,
+      profilePicture: (json['profilePic'] ?? json['profilePicture']) as String?,
+      isVerified: (json['emailVerified'] ?? json['isVerified'] ?? false) as bool,
+      acceptedPrivacyPolicy: (json['privacyPolicyAccepted'] ?? json['acceptedPrivacyPolicy'] ?? false) as bool,
+      acceptedTermsAndConditions: (json['termsAndConditionsAccepted'] ?? json['acceptedTermsAndConditions'] ?? false) as bool,
+      createdAt: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt'] as String) 
+          : DateTime.now(),
     );
   }
 

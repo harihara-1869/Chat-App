@@ -41,6 +41,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 // TODO: Implement search
               },
             ),
+          if (_currentIndex == 1)
+            IconButton(
+              icon: const Icon(Icons.person_add),
+              onPressed: () {
+                context.push(RoutePaths.friends);
+              },
+            ),
         ],
       ),
       body: IndexedStack(
@@ -121,7 +128,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
-                setState(() => _currentIndex = 1);
+                context.push(RoutePaths.friends);
               },
               child: const Text('Find Friends'),
             ),
@@ -368,6 +375,13 @@ class FriendsListContent extends ConsumerWidget {
                         fontSize: 18,
                         color: Colors.grey[600],
                       ),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        context.push(RoutePaths.friends);
+                      },
+                      child: const Text('Find Friends'),
                     ),
                   ],
                 ),

@@ -89,7 +89,7 @@ class VirusScanner {
     // const scanner = clamd.createScanner('localhost', 3310);
     // const result = await scanner.scanStream(buffer);
     // return { clean: result !== 'FOUND', threat: result === 'FOUND' ? 'Malware detected' : undefined };
-    
+
     console.warn('ClamAV scanning not implemented - configure endpoint');
     return { clean: true };
   }
@@ -114,7 +114,7 @@ class VirusScanner {
     //   clean: maliciousCount === 0, 
     //   threat: maliciousCount > 0 ? `Detected by ${maliciousCount} engines` : undefined 
     // };
-    
+
     console.warn('VirusTotal scanning not configured - add VIRUSTOTAL_API_KEY');
     return { clean: true };
   }
@@ -127,7 +127,7 @@ class VirusScanner {
     // Option A: S3 Intelligent-Tiering with Macie
     // Option B: Lambda-triggered scanning on upload
     // Option C: S3 Antivirus partner integration
-    
+
     console.warn('AWS malware scanning not configured');
     return { clean: true };
   }
@@ -146,16 +146,16 @@ const virusScanner = new VirusScanner({
  * @param {string} filename - Original filename
  * @throws {Error} If malware is detected
  */
-async function scanForMalware(buffer, filename) {
+export async function scanForMalware(buffer, filename) {
   try {
     const result = await virusScanner.scan(buffer, filename);
-    
+
     if (!result.clean) {
       const error = new Error(`Malware detected in file ${filename}: ${result.threat}`);
       error.code = 'MALWARE_DETECTED';
       throw error;
     }
-    
+
     return true;
   } catch (error) {
     if (error.code === 'MALWARE_DETECTED') {
@@ -171,7 +171,7 @@ async function scanForMalware(buffer, filename) {
 export async function generateUploadUrl(fileType, fileSize) {
   const client = getS3Client();
   const fileKey = `${uuidv4()}-${Date.now()}`;
-  
+
   const maxSize = 50 * 1024 * 1024; // 50MB
   if (fileSize > maxSize) {
     throw new Error(`File size exceeds maximum allowed size of ${maxSize} bytes`);
@@ -190,7 +190,7 @@ export async function generateUploadUrl(fileType, fileSize) {
     });
 
     const uploadUrl = await getSignedUrl(client, command, { expiresIn: 300 });
-    
+
     return {
       uploadUrl,
       fileKey,
@@ -216,7 +216,7 @@ export async function generateDownloadUrl(fileKey) {
     });
 
     const downloadUrl = await getSignedUrl(client, command, { expiresIn: 3600 });
-    
+
     return {
       downloadUrl,
       expiresIn: 3600,
@@ -242,7 +242,7 @@ export async function deleteAttachment(fileKey) {
     await client.send(command);
     return true;
   }
-  
+
   return true;
 }
 

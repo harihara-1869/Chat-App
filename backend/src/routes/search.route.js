@@ -42,7 +42,7 @@ router.get("/", protectRoute, async (req, res) => {
                 _id: { $ne: userId },
                 email: trimmed.toLowerCase(),
             })
-                .select("_id fullName profilePic")
+                .select("_id fullName profilePic email")
                 .limit(1);
         } else {
             // Escape special regex characters to prevent ReDoS attacks
@@ -51,7 +51,7 @@ router.get("/", protectRoute, async (req, res) => {
                 _id: { $ne: userId },
                 fullName: { $regex: escaped, $options: "i" },
             })
-                .select("_id fullName profilePic")
+                .select("_id fullName profilePic email")
                 .limit(10);
         }
 

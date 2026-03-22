@@ -77,6 +77,8 @@ export const signup = async (req, res) => {
         _id: newUser._id,
         fullName: newUser.fullName,
         email: newUser.email,
+        privacyPolicyAccepted: newUser.privacyPolicyAccepted,
+        termsAndConditionsAccepted: newUser.termsAndConditionsAccepted,
       });
     } else {
       return res.status(500).json({ message: "Failed to create user." });
@@ -141,6 +143,9 @@ export const login = async (req, res) => {
       fullName: user.fullName,
       email: user.email,
       profilePic: user.profilePic || null,
+      emailVerified: user.emailVerified,
+      privacyPolicyAccepted: user.privacyPolicyAccepted,
+      termsAndConditionsAccepted: user.termsAndConditionsAccepted,
     });
   } catch (error) {
     console.error("Error during login:", error);
