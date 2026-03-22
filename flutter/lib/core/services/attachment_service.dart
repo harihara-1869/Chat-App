@@ -3,7 +3,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
+import 'package:pointycastle/export.dart';
 
 class AttachmentEncryptionService {
   Uint8List generateKey() {
@@ -39,7 +39,8 @@ class AttachmentEncryptionService {
     return gcm.encrypt(data, key, iv);
   }
 
-  Uint8List _aesGcmDecrypt(Uint8List encryptedData, Uint8List key, Uint8List iv) {
+  Uint8List _aesGcmDecrypt(
+      Uint8List encryptedData, Uint8List key, Uint8List iv) {
     final gcm = _AesGcmCipher();
     return gcm.decrypt(encryptedData, key, iv);
   }
@@ -60,50 +61,56 @@ class AttachmentEncryptionService {
 
 class _AesGcmCipher {
   Uint8List encrypt(Uint8List data, Uint8List key, Uint8List iv) {
-    final encrypted = Uint8List(data.length + 16);
-    
-    for (int i = 0; i < data.length; i++) {
-      encrypted[i] = data[i] ^ key[i % key.length] ^ iv[i % iv.length];
-    }
-    
-    final tag = _computeTag(data, key, iv);
-    for (int i = 0; i < 16; i++) {
-      encrypted[data.length + i] = tag[i];
-    }
-    
-    return encrypted;
+    _validateParameters(key, iv);
+
+    final cipher = GCMBlockCipher(AESEngine())
+      ..init(
+        true,
+        AEADParameters(
+          KeyParameter(key),
+          128,
+          iv,
+          Uint8List(0),
+        ),
+      );
+
+    return cipher.process(data);
   }
 
   Uint8List decrypt(Uint8List encryptedData, Uint8List key, Uint8List iv) {
+    _validateParameters(key, iv);
+
     if (encryptedData.length < 16) {
       throw Exception('Invalid encrypted data');
     }
-    
-    final tag = _computeTag(encryptedData.sublist(0, encryptedData.length - 16), key, iv);
-    final storedTag = encryptedData.sublist(encryptedData.length - 16);
-    
-    for (int i = 0; i < 16; i++) {
-      if (tag[i] != storedTag[i]) {
-        throw Exception('Authentication failed');
-      }
+
+    final cipher = GCMBlockCipher(AESEngine())
+      ..init(
+        false,
+        AEADParameters(
+          KeyParameter(key),
+          128,
+          iv,
+          Uint8List(0),
+        ),
+      );
+
+    try {
+      return cipher.process(encryptedData);
+    } on InvalidCipherTextException {
+      throw Exception('Authentication failed');
     }
-    
-    final decrypted = Uint8List(encryptedData.length - 16);
-    for (int i = 0; i < decrypted.length; i++) {
-      decrypted[i] = encryptedData[i] ^ key[i % key.length] ^ iv[i % iv.length];
-    }
-    
-    return decrypted;
   }
 
-  Uint8List _computeTag(Uint8List data, Uint8List key, Uint8List iv) {
-    final tag = Uint8List(16);
-    for (int i = 0; i < data.length; i++) {
-      final keyByte = key[i % key.length];
-      final ivByte = iv[(i * 7) % iv.length];
-      tag[i % 16] ^= data[i] ^ keyByte ^ ivByte;
+  void _validateParameters(Uint8List key, Uint8List iv) {
+    if (key.length != 32) {
+      throw ArgumentError.value(
+          key.length, 'key', 'AES-256-GCM requires a 32-byte key');
     }
-    return tag;
+    if (iv.length != 12) {
+      throw ArgumentError.value(
+          iv.length, 'iv', 'AES-GCM requires a 12-byte IV');
+    }
   }
 }
 
@@ -127,7 +134,8 @@ class AttachmentRepository {
       : _dio = dio ?? Dio(),
         _encryptionService = AttachmentEncryptionService();
 
-  Future<Map<String, dynamic>> getUploadUrl(String fileType, int fileSize) async {
+  Future<Map<String, dynamic>> getUploadUrl(
+      String fileType, int fileSize) async {
     final response = await _dio.post(
       '/attachments/upload-url',
       data: {
@@ -145,7 +153,7 @@ class AttachmentRepository {
   ) async {
     final uploadInfo = await getUploadUrl(fileType, fileSize);
     final fileKey = uploadInfo['fileKey'] as String;
-    
+
     if (uploadInfo['development'] == true) {
       return AttachmentResult(
         fileKey: fileKey,
@@ -157,7 +165,7 @@ class AttachmentRepository {
     final uploadUrl = uploadInfo['uploadUrl'] as String;
     final key = _encryptionService.generateKey();
     final iv = _encryptionService.generateIV();
-    
+
     final encryptedData = _encryptionService.encryptBytes(fileData, key, iv);
     final keyAndIV = _encryptionService.encodeKeyAndIV(key, iv);
 
@@ -190,9 +198,9 @@ class AttachmentRepository {
     final response = await _dio.get(
       '/attachments/download-url/$fileKey',
     );
-    
+
     final downloadUrl = response.data['downloadUrl'] as String;
-    
+
     final encryptedResponse = await _dio.get<List<int>>(
       downloadUrl,
       options: Options(responseType: ResponseType.bytes),
@@ -200,7 +208,7 @@ class AttachmentRepository {
 
     final encryptedData = Uint8List.fromList(encryptedResponse.data!);
     final (key, iv) = _encryptionService.decodeKeyAndIV(encryptionInfo);
-    
+
     return _encryptionService.decryptBytes(encryptedData, key, iv);
   }
 }

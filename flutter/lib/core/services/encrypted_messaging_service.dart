@@ -39,17 +39,18 @@ class EncryptedMessagingService {
 
   Future<void> generateAndUploadKeys() async {
     await _signalService.initialize();
-    
+
     final identity = await _signalService.generateIdentityKeyPair();
     final signedPreKey = await _signalService.generateSignedPreKey(1);
-    final oneTimePreKeys = await _signalService.generateOneTimePreKeys(100, 100);
-    
+    final oneTimePreKeys =
+        await _signalService.generateOneTimePreKeys(100, 100);
+
     await _keyRepository.uploadSignedPreKey(
       keyId: signedPreKey['keyId'],
       publicKey: signedPreKey['publicKey'],
       signature: signedPreKey['signature'],
     );
-    
+
     await _keyRepository.uploadOneTimePreKeys(
       preKeys: oneTimePreKeys,
     );
@@ -64,17 +65,11 @@ class EncryptedMessagingService {
     if (hasSession) return;
 
     final bundle = await _keyRepository.getPreKeyBundle(recipientId);
-    
-    await _signalService.createSession(recipientId, {
-      'registrationId': bundle['registrationId'],
-      'deviceId': bundle['deviceId'],
-      'preKeyId': bundle['oneTimePreKey']?['keyId'],
-      'preKeyPublicKey': bundle['oneTimePreKey']?['publicKey'],
-      'signedPreKeyId': bundle['signedPreKey']['keyId'],
-      'signedPreKeyPublic': bundle['signedPreKey']['publicKey'],
-      'signedPreKeySignature': bundle['signedPreKey']['signature'],
-      'identityKey': bundle['identityKey'],
-    });
+
+    await _signalService.createSession(
+      recipientId,
+      SignalService.normalizePreKeyBundle(bundle),
+    );
 
     // Fire-and-forget: replenish OneTimePreKeys after consuming one
     if (_deviceRegistrationService != null) {
@@ -97,7 +92,8 @@ class EncryptedMessagingService {
     final encrypted = await _signalService.encryptMessage(
       recipientId: recipientId,
       plaintext: plaintext,
-      preKeyBundle: bundle,
+      preKeyBundle:
+          bundle != null ? SignalService.normalizePreKeyBundle(bundle) : null,
     );
 
     final response = await _apiClient.post(
@@ -168,7 +164,8 @@ class EncryptedMessagingService {
     });
   }
 
-  Future<List<Map<String, dynamic>>> getLocalMessages(String otherUserId) async {
+  Future<List<Map<String, dynamic>>> getLocalMessages(
+      String otherUserId) async {
     return await _messageStore.getMessages(otherUserId);
   }
 
@@ -181,14 +178,16 @@ final keyRepositoryProvider = Provider<KeyRepository>((ref) {
   return KeyRepository(apiClient: ApiClient());
 });
 
-final encryptedMessagingServiceProvider = Provider<EncryptedMessagingService>((ref) {
+final encryptedMessagingServiceProvider =
+    Provider<EncryptedMessagingService>((ref) {
   final signalService = ref.watch(signalServiceProvider);
   final keyRepository = ref.watch(keyRepositoryProvider);
   final messageStore = ref.watch(messageStoreProvider).value;
   final db = ref.watch(appDatabaseProvider).value;
-  final deviceRegistrationServiceAsync = ref.watch(deviceRegistrationServiceProvider);
+  final deviceRegistrationServiceAsync =
+      ref.watch(deviceRegistrationServiceProvider);
   final deviceRegistrationService = deviceRegistrationServiceAsync.valueOrNull;
-  
+
   if (messageStore == null || db == null) {
     throw StateError('Database not initialized');
   }
@@ -203,12 +202,14 @@ final encryptedMessagingServiceProvider = Provider<EncryptedMessagingService>((r
   );
 });
 
-final encryptedMessagingServiceAsyncProvider = FutureProvider<EncryptedMessagingService>((ref) async {
+final encryptedMessagingServiceAsyncProvider =
+    FutureProvider<EncryptedMessagingService>((ref) async {
   final signalService = ref.watch(signalServiceProvider);
   final keyRepository = ref.watch(keyRepositoryProvider);
   final messageStore = await ref.watch(messageStoreProvider.future);
   final db = await ref.watch(appDatabaseProvider.future);
-  final deviceRegistrationServiceAsync = ref.watch(deviceRegistrationServiceProvider);
+  final deviceRegistrationServiceAsync =
+      ref.watch(deviceRegistrationServiceProvider);
   final deviceRegistrationService = deviceRegistrationServiceAsync.valueOrNull;
 
   return EncryptedMessagingService(

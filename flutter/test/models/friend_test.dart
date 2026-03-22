@@ -67,6 +67,7 @@ void main() {
         senderId: 'sender1',
         senderUsername: 'sender',
         receiverId: 'receiver1',
+        receiverUsername: 'receiver',
         status: FriendRequestStatus.pending,
         createdAt: testDateTime,
       );
@@ -82,10 +83,15 @@ void main() {
     test('should create FriendRequest from JSON', () {
       final json = {
         '_id': 'req2',
-        'senderId': 'sender2',
-        'senderUsername': 'jsonSender',
-        'senderProfilePicture': 'https://example.com/pic.jpg',
-        'receiverId': 'receiver2',
+        'senderId': {
+          '_id': 'sender2',
+          'fullName': 'jsonSender',
+          'profilePic': 'https://example.com/pic.jpg',
+        },
+        'receiverId': {
+          '_id': 'receiver2',
+          'fullName': 'jsonReceiver',
+        },
         'status': 'accepted',
         'createdAt': '2024-01-01T12:00:00.000',
       };
@@ -93,16 +99,23 @@ void main() {
       final request = FriendRequest.fromJson(json);
 
       expect(request.id, 'req2');
+      expect(request.senderId, 'sender2');
       expect(request.senderUsername, 'jsonSender');
       expect(request.senderProfilePicture, 'https://example.com/pic.jpg');
+      expect(request.receiverId, 'receiver2');
+      expect(request.receiverUsername, 'jsonReceiver');
       expect(request.status, FriendRequestStatus.accepted);
     });
 
     test('should handle different status values', () {
-      expect(FriendRequestStatus.fromString('pending'), FriendRequestStatus.pending);
-      expect(FriendRequestStatus.fromString('accepted'), FriendRequestStatus.accepted);
-      expect(FriendRequestStatus.fromString('rejected'), FriendRequestStatus.rejected);
-      expect(FriendRequestStatus.fromString('unknown'), FriendRequestStatus.pending);
+      expect(FriendRequestStatus.fromString('pending'),
+          FriendRequestStatus.pending);
+      expect(FriendRequestStatus.fromString('accepted'),
+          FriendRequestStatus.accepted);
+      expect(FriendRequestStatus.fromString('rejected'),
+          FriendRequestStatus.rejected);
+      expect(FriendRequestStatus.fromString('unknown'),
+          FriendRequestStatus.pending);
     });
   });
 

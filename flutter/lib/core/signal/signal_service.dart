@@ -33,8 +33,10 @@ class SignalService {
 
   Future<void> loadIdentityFromBundle() async {
     final identityKeyPair = await identityKeyStore.getIdentityKeyPair();
-    _identityPrivateKey = PrivateKey.deserialize(bytes: identityKeyPair.privateKey.toList());
-    _identityPublicKey = PublicKey.deserialize(bytes: identityKeyPair.publicKey.toList());
+    _identityPrivateKey =
+        PrivateKey.deserialize(bytes: identityKeyPair.privateKey.toList());
+    _identityPublicKey =
+        PublicKey.deserialize(bytes: identityKeyPair.publicKey.toList());
     _registrationId = await identityKeyStore.getLocalRegistrationId();
   }
 
@@ -133,7 +135,8 @@ class SignalService {
 
   Future<Map<String, dynamic>> getPreKeyBundle() async {
     final signedPreKeyId = 1;
-    final signedPreKey = await signedPreKeyStore.loadSignedPreKey(signedPreKeyId);
+    final signedPreKey =
+        await signedPreKeyStore.loadSignedPreKey(signedPreKeyId);
 
     final signedPreKeyPublicKey = signedPreKey.publicKey();
     final signature = _identityPrivateKey.sign(
@@ -143,7 +146,7 @@ class SignalService {
     final kyberPreKeyId = 1;
     final kyberPreKey = await kyberPreKeyStore.loadKyberPreKey(kyberPreKeyId);
     final kyberPublicKey = kyberPreKey?.getPublicKey();
-    final kyberSignature = kyberPreKey != null 
+    final kyberSignature = kyberPreKey != null
         ? _identityPrivateKey.sign(message: kyberPublicKey!.serialize())
         : null;
 
@@ -155,8 +158,11 @@ class SignalService {
       'signedPreKeyPublic': base64Encode(signedPreKeyPublicKey),
       'signedPreKeySignature': base64Encode(signature),
       'kyberPreKeyId': kyberPreKeyId,
-      'kyberPreKeyPublic': kyberPublicKey != null ? base64Encode(kyberPublicKey.serialize()) : null,
-      'kyberPreKeySignature': kyberSignature != null ? base64Encode(kyberSignature) : null,
+      'kyberPreKeyPublic': kyberPublicKey != null
+          ? base64Encode(kyberPublicKey.serialize())
+          : null,
+      'kyberPreKeySignature':
+          kyberSignature != null ? base64Encode(kyberSignature) : null,
     };
   }
 
@@ -164,34 +170,89 @@ class SignalService {
     String recipientId,
     Map<String, dynamic> preKeyBundle,
   ) async {
+    final normalizedBundle = normalizePreKeyBundle(preKeyBundle);
+    final isValidSignature = verifySignedPreKeySignature(normalizedBundle);
+    if (!isValidSignature) {
+      throw const SignalException(
+        'Invalid signed pre-key signature for recipient bundle',
+      );
+    }
+
     final recipientAddress = ProtocolAddress(
       name: recipientId,
-      deviceId: preKeyBundle['deviceId'] as int,
+      deviceId: normalizedBundle['deviceId'] as int,
     );
 
     final bundle = PreKeyBundle(
-      registrationId: preKeyBundle['registrationId'] as int,
-      deviceId: preKeyBundle['deviceId'] as int,
-      preKeyId: preKeyBundle['preKeyId'] as int?,
-      preKeyPublic: preKeyBundle['preKeyPublicKey'] != null 
-          ? base64Decode(preKeyBundle['preKeyPublicKey'] as String) 
+      registrationId: normalizedBundle['registrationId'] as int,
+      deviceId: normalizedBundle['deviceId'] as int,
+      preKeyId: normalizedBundle['preKeyId'] as int?,
+      preKeyPublic: normalizedBundle['preKeyPublicKey'] != null
+          ? base64Decode(normalizedBundle['preKeyPublicKey'] as String)
           : null,
-      signedPreKeyId: preKeyBundle['signedPreKeyId'] as int,
-      signedPreKeyPublic: base64Decode(preKeyBundle['signedPreKeyPublic'] as String),
-      signedPreKeySignature: base64Decode(preKeyBundle['signedPreKeySignature'] as String),
-      identityKey: base64Decode(preKeyBundle['identityKey'] as String),
-      kyberPreKeyId: preKeyBundle['kyberPreKeyId'] as int? ?? 1,
-      kyberPreKeyPublic: base64Decode(preKeyBundle['kyberPreKeyPublic'] as String),
-      kyberPreKeySignature: base64Decode(preKeyBundle['kyberPreKeySignature'] as String),
+      signedPreKeyId: normalizedBundle['signedPreKeyId'] as int,
+      signedPreKeyPublic:
+          base64Decode(normalizedBundle['signedPreKeyPublic'] as String),
+      signedPreKeySignature:
+          base64Decode(normalizedBundle['signedPreKeySignature'] as String),
+      identityKey: base64Decode(normalizedBundle['identityKey'] as String),
+      kyberPreKeyId: normalizedBundle['kyberPreKeyId'] as int? ?? 1,
+      kyberPreKeyPublic:
+          base64Decode(normalizedBundle['kyberPreKeyPublic'] as String),
+      kyberPreKeySignature:
+          base64Decode(normalizedBundle['kyberPreKeySignature'] as String),
     );
 
     final builder = _bundle.getSessionBuilder(recipientAddress);
 
     await builder.processPreKeyBundle(recipientAddress, bundle);
 
-    if (preKeyBundle['preKeyId'] != null && preKeyBundle['preKeyId'] != 0) {
-      await preKeyStore.removePreKey(preKeyBundle['preKeyId'] as int);
+    if (normalizedBundle['preKeyId'] != null &&
+        normalizedBundle['preKeyId'] != 0) {
+      await preKeyStore.removePreKey(normalizedBundle['preKeyId'] as int);
     }
+  }
+
+  static Map<String, dynamic> normalizePreKeyBundle(
+      Map<String, dynamic> preKeyBundle) {
+    if (preKeyBundle['signedPreKey'] is Map<String, dynamic>) {
+      final signedPreKey = preKeyBundle['signedPreKey'] as Map<String, dynamic>;
+      final oneTimePreKey =
+          preKeyBundle['oneTimePreKey'] as Map<String, dynamic>?;
+      return {
+        'registrationId': preKeyBundle['registrationId'],
+        'deviceId': preKeyBundle['deviceId'],
+        'preKeyId': oneTimePreKey?['keyId'],
+        'preKeyPublicKey': oneTimePreKey?['publicKey'],
+        'signedPreKeyId': signedPreKey['keyId'],
+        'signedPreKeyPublic': signedPreKey['publicKey'],
+        'signedPreKeySignature': signedPreKey['signature'],
+        'identityKey': preKeyBundle['identityKey'],
+        'kyberPreKeyId': preKeyBundle['kyberPreKeyId'],
+        'kyberPreKeyPublic': preKeyBundle['kyberPreKeyPublic'],
+        'kyberPreKeySignature': preKeyBundle['kyberPreKeySignature'],
+      };
+    }
+
+    return Map<String, dynamic>.from(preKeyBundle);
+  }
+
+  static bool verifySignedPreKeySignature(Map<String, dynamic> preKeyBundle) {
+    final normalizedBundle = normalizePreKeyBundle(preKeyBundle);
+    final identityKeyBytes = Uint8List.fromList(
+        base64Decode(normalizedBundle['identityKey'] as String));
+    final signedPreKeyPublicBytes = Uint8List.fromList(
+      base64Decode(normalizedBundle['signedPreKeyPublic'] as String),
+    );
+    final signatureBytes = Uint8List.fromList(
+      base64Decode(normalizedBundle['signedPreKeySignature'] as String),
+    );
+
+    final identityKey = PublicKey.deserialize(bytes: identityKeyBytes);
+    return identityKey.verify(
+      message: signedPreKeyPublicBytes,
+      signature: signatureBytes,
+    );
   }
 
   Future<Map<String, dynamic>> encryptMessage({
@@ -202,7 +263,7 @@ class SignalService {
     final recipientAddress = ProtocolAddress(name: recipientId, deviceId: 1);
 
     final hasSession = await sessionStore.containsSession(recipientAddress);
-    
+
     if (!hasSession && preKeyBundle != null) {
       await createSession(recipientId, preKeyBundle);
     }
@@ -232,9 +293,11 @@ class SignalService {
 
     Uint8List plaintext;
     if (payload['type'] == 'prekey' || payload['type'] == 1) {
-      plaintext = await cipher.decryptPreKeyMessage(senderAddress, ciphertextBytes);
+      plaintext =
+          await cipher.decryptPreKeyMessage(senderAddress, ciphertextBytes);
     } else {
-      plaintext = await cipher.decryptSignalMessage(senderAddress, ciphertextBytes);
+      plaintext =
+          await cipher.decryptSignalMessage(senderAddress, ciphertextBytes);
     }
 
     return utf8.decode(plaintext);

@@ -6,6 +6,7 @@ import 'package:chat_app/features/friends/repositories/friend_repository.dart';
 import 'package:chat_app/core/socket/socket_service.dart';
 
 class MockFriendRepository extends Mock implements FriendRepository {}
+
 class MockSocketService extends Mock implements SocketService {}
 
 void main() {
@@ -15,7 +16,7 @@ void main() {
 
   final testDateTime = DateTime(2024, 1, 1, 12, 0, 0);
 
-  final testFriends = [
+  final List<Friend> testFriends = [
     Friend(
       id: 'friend1',
       username: 'friend1',
@@ -32,28 +33,38 @@ void main() {
     ),
   ];
 
-  final testPendingRequests = [
+  final List<FriendRequest> testPendingRequests = [
     FriendRequest(
       id: 'req1',
       senderId: 'sender1',
       senderUsername: 'sender',
       receiverId: 'user1',
+      receiverUsername: 'receiver',
       status: FriendRequestStatus.pending,
       createdAt: testDateTime,
     ),
   ];
+
+  Future<void> settleFriendsNotifier() async {
+    await Future<void>.delayed(const Duration(milliseconds: 1));
+  }
 
   setUp(() {
     mockFriendRepository = MockFriendRepository();
     mockSocketService = MockSocketService();
 
     // Setup socket stream controllers
-    when(() => mockSocketService.onFriendRequest).thenAnswer((_) => const Stream.empty());
-    when(() => mockSocketService.onFriendAccepted).thenAnswer((_) => const Stream.empty());
+    when(() => mockSocketService.onFriendRequest)
+        .thenAnswer((_) => const Stream.empty());
+    when(() => mockSocketService.onFriendAccepted)
+        .thenAnswer((_) => const Stream.empty());
 
     // Setup default mock responses for repository methods
     when(() => mockFriendRepository.getFriends()).thenAnswer((_) async => []);
-    when(() => mockFriendRepository.getPendingRequests()).thenAnswer((_) async => []);
+    when(() => mockFriendRepository.getPendingRequests())
+        .thenAnswer((_) async => []);
+    when(() => mockFriendRepository.getSentRequests())
+        .thenAnswer((_) async => []);
 
     friendsNotifier = FriendsNotifier(
       friendRepository: mockFriendRepository,
@@ -92,9 +103,15 @@ void main() {
     });
 
     test('loadFriends should update friends and pending requests', () async {
+      await settleFriendsNotifier();
+
       // Re-configure mocks to return test data
-      when(() => mockFriendRepository.getFriends()).thenAnswer((_) async => testFriends);
-      when(() => mockFriendRepository.getPendingRequests()).thenAnswer((_) async => testPendingRequests);
+      when(() => mockFriendRepository.getFriends())
+          .thenAnswer((_) async => testFriends);
+      when(() => mockFriendRepository.getPendingRequests())
+          .thenAnswer((_) async => testPendingRequests);
+      when(() => mockFriendRepository.getSentRequests())
+          .thenAnswer((_) async => []);
 
       // Call refresh to trigger the load with new mock data
       await friendsNotifier.refresh();
@@ -105,7 +122,9 @@ void main() {
     });
 
     test('sendFriendRequest should call repository', () async {
-      when(() => mockFriendRepository.sendFriendRequest(any())).thenAnswer((_) async {});
+      await settleFriendsNotifier();
+      when(() => mockFriendRepository.sendFriendRequest(any()))
+          .thenAnswer((_) async {});
 
       await friendsNotifier.sendFriendRequest('user123');
 
@@ -113,17 +132,26 @@ void main() {
     });
 
     test('sendFriendRequest should set error on failure', () async {
-      when(() => mockFriendRepository.sendFriendRequest(any())).thenThrow(Exception('Failed'));
+      await settleFriendsNotifier();
+      when(() => mockFriendRepository.sendFriendRequest(any()))
+          .thenThrow(Exception('Failed'));
 
       await friendsNotifier.sendFriendRequest('user123');
 
       expect(friendsNotifier.state.error, isNotNull);
     });
 
-    test('acceptFriendRequest should update state and reload friends', () async {
-      when(() => mockFriendRepository.acceptFriendRequest(any())).thenAnswer((_) async {});
-      when(() => mockFriendRepository.getFriends()).thenAnswer((_) async => testFriends);
-      when(() => mockFriendRepository.getPendingRequests()).thenAnswer((_) async => []);
+    test('acceptFriendRequest should update state and reload friends',
+        () async {
+      await settleFriendsNotifier();
+      when(() => mockFriendRepository.acceptFriendRequest(any()))
+          .thenAnswer((_) async {});
+      when(() => mockFriendRepository.getFriends())
+          .thenAnswer((_) async => testFriends);
+      when(() => mockFriendRepository.getPendingRequests())
+          .thenAnswer((_) async => []);
+      when(() => mockFriendRepository.getSentRequests())
+          .thenAnswer((_) async => []);
 
       await friendsNotifier.acceptFriendRequest('req1');
 
@@ -131,7 +159,9 @@ void main() {
     });
 
     test('rejectFriendRequest should remove from pending requests', () async {
-      when(() => mockFriendRepository.rejectFriendRequest(any())).thenAnswer((_) async {});
+      await settleFriendsNotifier();
+      when(() => mockFriendRepository.rejectFriendRequest(any()))
+          .thenAnswer((_) async {});
 
       await friendsNotifier.rejectFriendRequest('req1');
 
@@ -139,15 +169,20 @@ void main() {
     });
 
     test('removeFriend should remove friend from list', () async {
-      when(() => mockFriendRepository.removeFriend(any())).thenAnswer((_) async {});
+      await settleFriendsNotifier();
+      when(() => mockFriendRepository.removeFriend(any()))
+          .thenAnswer((_) async {});
 
       await friendsNotifier.removeFriend('friend1');
 
       verify(() => mockFriendRepository.removeFriend('friend1')).called(1);
     });
 
-    test('blockUser should remove user from friends and pending requests', () async {
-      when(() => mockFriendRepository.blockUser(any())).thenAnswer((_) async {});
+    test('blockUser should remove user from friends and pending requests',
+        () async {
+      await settleFriendsNotifier();
+      when(() => mockFriendRepository.blockUser(any()))
+          .thenAnswer((_) async {});
 
       await friendsNotifier.blockUser('friend1');
 
@@ -155,7 +190,9 @@ void main() {
     });
 
     test('blockUser should set error on failure', () async {
-      when(() => mockFriendRepository.blockUser(any())).thenThrow(Exception('Failed'));
+      await settleFriendsNotifier();
+      when(() => mockFriendRepository.blockUser(any()))
+          .thenThrow(Exception('Failed'));
 
       await friendsNotifier.blockUser('friend1');
 
@@ -163,8 +200,13 @@ void main() {
     });
 
     test('refresh should reload friends', () async {
-      when(() => mockFriendRepository.getFriends()).thenAnswer((_) async => testFriends);
-      when(() => mockFriendRepository.getPendingRequests()).thenAnswer((_) async => testPendingRequests);
+      await settleFriendsNotifier();
+      when(() => mockFriendRepository.getFriends())
+          .thenAnswer((_) async => testFriends);
+      when(() => mockFriendRepository.getPendingRequests())
+          .thenAnswer((_) async => testPendingRequests);
+      when(() => mockFriendRepository.getSentRequests())
+          .thenAnswer((_) async => []);
 
       await friendsNotifier.refresh();
 
@@ -219,7 +261,8 @@ void main() {
         ),
       ];
 
-      when(() => mockFriendRepository.searchUsers(any())).thenAnswer((_) async => results);
+      when(() => mockFriendRepository.searchUsers(any()))
+          .thenAnswer((_) async => results);
 
       await searchNotifier.search('search');
 
@@ -236,7 +279,8 @@ void main() {
     });
 
     test('search should set error on failure', () async {
-      when(() => mockFriendRepository.searchUsers(any())).thenThrow(Exception('Failed'));
+      when(() => mockFriendRepository.searchUsers(any()))
+          .thenThrow(Exception('Failed'));
 
       await searchNotifier.search('test');
 
@@ -245,7 +289,8 @@ void main() {
     });
 
     test('clear should reset state', () async {
-      when(() => mockFriendRepository.searchUsers(any())).thenAnswer((_) async => const []);
+      when(() => mockFriendRepository.searchUsers(any()))
+          .thenAnswer((_) async => const []);
 
       await searchNotifier.search('test');
       searchNotifier.clear();
@@ -258,8 +303,18 @@ void main() {
   group('onlineFriendsProvider', () {
     test('should filter online friends', () {
       final friendsList = [
-        Friend(id: '1', username: 'user1', email: 'a@b.com', isOnline: true, friendsSince: testDateTime),
-        Friend(id: '2', username: 'user2', email: 'b@b.com', isOnline: false, friendsSince: testDateTime),
+        Friend(
+            id: '1',
+            username: 'user1',
+            email: 'a@b.com',
+            isOnline: true,
+            friendsSince: testDateTime),
+        Friend(
+            id: '2',
+            username: 'user2',
+            email: 'b@b.com',
+            isOnline: false,
+            friendsSince: testDateTime),
       ];
       final onlineFriends = friendsList.where((f) => f.isOnline).toList();
 
@@ -276,6 +331,7 @@ void main() {
           senderId: 's1',
           senderUsername: 'user',
           receiverId: 'r1',
+          receiverUsername: 'receiver1',
           status: FriendRequestStatus.pending,
           createdAt: testDateTime,
         ),
@@ -284,6 +340,7 @@ void main() {
           senderId: 's2',
           senderUsername: 'user2',
           receiverId: 'r1',
+          receiverUsername: 'receiver1',
           status: FriendRequestStatus.pending,
           createdAt: testDateTime,
         ),

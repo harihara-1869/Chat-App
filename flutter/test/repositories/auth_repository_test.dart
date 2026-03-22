@@ -29,18 +29,18 @@ void main() {
     group('signup', () {
       test('should return User on successful signup', () async {
         final responseData = {
-          'user': {
-            '_id': 'user1',
-            'username': 'testuser',
-            'email': 'test@example.com',
-            'createdAt': '2024-01-01T12:00:00.000',
-          },
+          '_id': 'user1',
+          'fullName': 'testuser',
+          'email': 'test@example.com',
+          'privacyPolicyAccepted': true,
+          'termsAndConditionsAccepted': true,
+          'createdAt': '2024-01-01T12:00:00.000',
         };
 
         when(() => mockApiClient.post(
-          any(),
-          data: any(named: 'data'),
-        )).thenAnswer((_) async => _MockResponse(data: responseData));
+              any(),
+              data: any(named: 'data'),
+            )).thenAnswer((_) async => _MockResponse(data: responseData));
 
         final user = await authRepository.signup(
           username: 'testuser',
@@ -55,9 +55,10 @@ void main() {
 
       test('should throw ServerException on failure', () async {
         when(() => mockApiClient.post(
-          any(),
-          data: any(named: 'data'),
-        )).thenThrow(const ServerException(message: 'Email already exists'));
+                  any(),
+                  data: any(named: 'data'),
+                ))
+            .thenThrow(const ServerException(message: 'Email already exists'));
 
         expect(
           () => authRepository.signup(
@@ -73,18 +74,18 @@ void main() {
     group('login', () {
       test('should return User on successful login', () async {
         final responseData = {
-          'user': {
-            '_id': 'user1',
-            'username': 'testuser',
-            'email': 'test@example.com',
-            'createdAt': '2024-01-01T12:00:00.000',
-          },
+          '_id': 'user1',
+          'fullName': 'testuser',
+          'email': 'test@example.com',
+          'privacyPolicyAccepted': true,
+          'termsAndConditionsAccepted': true,
+          'createdAt': '2024-01-01T12:00:00.000',
         };
 
         when(() => mockApiClient.post(
-          any(),
-          data: any(named: 'data'),
-        )).thenAnswer((_) async => _MockResponse(data: responseData));
+              any(),
+              data: any(named: 'data'),
+            )).thenAnswer((_) async => _MockResponse(data: responseData));
 
         final user = await authRepository.login(
           email: 'test@example.com',
@@ -97,9 +98,9 @@ void main() {
 
       test('should throw ServerException on failure', () async {
         when(() => mockApiClient.post(
-          any(),
-          data: any(named: 'data'),
-        )).thenThrow(const ServerException(message: 'Invalid credentials'));
+              any(),
+              data: any(named: 'data'),
+            )).thenThrow(const ServerException(message: 'Invalid credentials'));
 
         expect(
           () => authRepository.login(
@@ -113,7 +114,8 @@ void main() {
 
     group('logout', () {
       test('should call post and clear cookies', () async {
-        when(() => mockApiClient.post(any())).thenAnswer((_) async => _MockResponse(data: {}));
+        when(() => mockApiClient.post(any()))
+            .thenAnswer((_) async => _MockResponse(data: {}));
         when(() => mockApiClient.clearCookies()).thenAnswer((_) async {});
 
         await authRepository.logout();
@@ -123,7 +125,8 @@ void main() {
       });
 
       test('should clear cookies even if post fails', () async {
-        when(() => mockApiClient.post(any())).thenThrow(const ServerException(message: 'Error'));
+        when(() => mockApiClient.post(any()))
+            .thenThrow(const ServerException(message: 'Error'));
         when(() => mockApiClient.clearCookies()).thenAnswer((_) async {});
 
         await authRepository.logout();
@@ -163,7 +166,8 @@ void main() {
 
     group('isAuthenticated', () {
       test('should return true when authenticated', () async {
-        when(() => mockApiClient.isAuthenticated()).thenAnswer((_) async => true);
+        when(() => mockApiClient.isAuthenticated())
+            .thenAnswer((_) async => true);
 
         final result = await authRepository.isAuthenticated();
 
@@ -171,7 +175,8 @@ void main() {
       });
 
       test('should return false when not authenticated', () async {
-        when(() => mockApiClient.isAuthenticated()).thenAnswer((_) async => false);
+        when(() => mockApiClient.isAuthenticated())
+            .thenAnswer((_) async => false);
 
         final result = await authRepository.isAuthenticated();
 
@@ -181,7 +186,8 @@ void main() {
 
     group('acceptPolicies', () {
       test('should call acceptPrivacyPolicy', () async {
-        when(() => mockApiClient.post(any())).thenAnswer((_) async => _MockResponse(data: {}));
+        when(() => mockApiClient.post(any()))
+            .thenAnswer((_) async => _MockResponse(data: {}));
 
         await authRepository.acceptPolicies();
 

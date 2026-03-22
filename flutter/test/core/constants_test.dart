@@ -4,7 +4,7 @@ import 'package:chat_app/core/constants/constants.dart';
 void main() {
   group('ApiConstants', () {
     test('should have correct base URL', () {
-      expect(ApiConstants.baseUrl, 'http://10.0.2.2:5001');
+      expect(ApiConstants.baseUrl, 'http://10.0.2.2:5000');
     });
 
     test('should have all required routes', () {
