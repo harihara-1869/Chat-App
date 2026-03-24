@@ -28,7 +28,7 @@ class SocketConstants {
   SocketConstants._();
 
   /// WebSocket URL (same host, no /api prefix)
-  static const String wsUrl = 'http://10.0.2.2:5001';
+  static const String wsUrl = 'http://10.0.2.2:5000';
   // static const String wsUrl = 'http://localhost:5001';
   // static const String wsUrl = 'https://your-production-api.com';
 
