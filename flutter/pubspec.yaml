@@ -18,6 +18,9 @@ dependencies:
   # Real-time
   socket_io_client: ^2.0.3+1
 
+  # Firebase
+  firebase_core: ^4.0.0
+
   # State Management
   flutter_riverpod: ^2.5.1
   riverpod_annotation: ^2.3.5
@@ -26,7 +29,7 @@ dependencies:
   go_router: ^14.0.0
 
   # Secure Storage (for identity key + DB encryption key only)
-  flutter_secure_storage: ^9.0.0
+  flutter_secure_storage: ^10.0.0
 
   # Encrypted Database (drift with SQLCipher)
   drift: ^2.18.0
@@ -44,15 +47,14 @@ dependencies:
   cached_network_image: ^3.4.1
 
   # Firebase
-  firebase_messaging: ^14.9.0
+  firebase_messaging: ^16.0.0
 
   # Utilities
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0
   equatable: ^2.0.5
   uuid: ^4.4.0
-  bip39: ^1.0.6
-  pointycastle: ^3.9.1
+  pointycastle: ^4.0.0
   crypto: ^3.0.3
 
 dev_dependencies:

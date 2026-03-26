@@ -583,7 +583,7 @@ class BackupScreenViewModel extends StateNotifier<BackupScreenState> {
   BackupScreenViewModel() : super(const BackupScreenState());
 
   final _secureStorage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    aOptions: AndroidOptions(),
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock_this_device),
   );
 

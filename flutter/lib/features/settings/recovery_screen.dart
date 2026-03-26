@@ -46,7 +46,7 @@ class RecoveryScreenViewModel extends StateNotifier<RecoveryScreenState> {
   RecoveryScreenViewModel() : super(const RecoveryScreenState());
 
   final _secureStorage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    aOptions: AndroidOptions(),
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock_this_device),
   );
 

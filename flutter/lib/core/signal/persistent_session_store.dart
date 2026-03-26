@@ -33,9 +33,7 @@ class PersistentSessionStore implements SessionStore {
         _now = now ?? DateTime.now,
         _storage = storage ??
             const FlutterSecureStorage(
-              aOptions: AndroidOptions(
-                encryptedSharedPreferences: true,
-              ),
+              aOptions: AndroidOptions(),
               iOptions: IOSOptions(
                 accessibility: KeychainAccessibility.first_unlock_this_device,
               ),
