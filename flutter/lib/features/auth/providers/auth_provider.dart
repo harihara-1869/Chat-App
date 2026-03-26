@@ -86,10 +86,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
           // Connect socket and store user
           await _socketService.connect();
           await _secureStorage.storeUserId(user.id);
-          
+
+          // Ensure device is registered (generates Signal keys if needed)
+          await _ensureDeviceRegistered();
+
           // Check and refill OneTimePreKeys if needed
           await _checkAndRefillPreKeys();
-          
+
           state = state.copyWith(
             status: AuthStatus.authenticated,
             user: user,
@@ -122,6 +125,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // Connect socket for real-time features
       await _socketService.connect();
       await _secureStorage.storeUserId(user.id);
+
+      // Ensure device is registered (generates Signal keys if needed)
+      await _ensureDeviceRegistered();
 
       // Check and refill OneTimePreKeys if needed
       await _checkAndRefillPreKeys();
@@ -185,6 +191,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // Connect socket after accepting policies
       await _socketService.connect();
 
+      // Ensure device is registered (generates Signal keys if needed)
+      await _ensureDeviceRegistered();
+
+      // Check and refill OneTimePreKeys if needed
+      await _checkAndRefillPreKeys();
+
       if (state.user != null) {
         final updatedUser = state.user!.copyWith(
           acceptedPrivacyPolicy: true,
@@ -200,13 +212,35 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Check and refill OneTimePreKeys if below threshold
-  Future<void> _checkAndRefillPreKeys() async {
+  /// Ensure device is registered with Signal Protocol keys.
+  /// Generates and uploads identity key, signed pre-key, one-time pre-keys,
+  /// and Kyber pre-key if not already registered.
+  Future<void> _ensureDeviceRegistered() async {
     if (_deviceRegistrationService == null) return;
-    
+
     try {
       final isRegistered = await _deviceRegistrationService.isDeviceRegistered();
       if (!isRegistered) {
+        await _deviceRegistrationService.register();
+      }
+    } catch (e) {
+      // Log error but don't block authentication - device registration
+      // can be retried later when sending first message
+      state = state.copyWith(preKeyWarning: true);
+    }
+  }
+
+  /// Check and refill OneTimePreKeys if below threshold
+  Future<void> _checkAndRefillPreKeys() async {
+    if (_deviceRegistrationService == null) return;
+
+    try {
+      // Device should already be registered at this point via _ensureDeviceRegistered()
+      // but double-check to avoid errors
+      final isRegistered = await _deviceRegistrationService.isDeviceRegistered();
+      if (!isRegistered) {
+        // Device not registered, skip refill - registration will be attempted
+        // when user tries to send first message
         return;
       }
       

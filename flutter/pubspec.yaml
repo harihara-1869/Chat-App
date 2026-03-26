@@ -37,18 +37,18 @@ dependencies:
   path: ^1.9.0
 
   # Signal Protocol for E2EE
-  libsignal: ^2.7.2
+  libsignal: ^2.8.1
 
   # UI & Media
   image_picker: ^1.1.2
-  cached_network_image: ^3.3.1
+  cached_network_image: ^3.4.1
 
   # Firebase
   firebase_messaging: ^14.9.0
 
   # Utilities
-  freezed_annotation: ^2.4.1
-  json_annotation: ^4.8.1
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
   equatable: ^2.0.5
   uuid: ^4.4.0
   bip39: ^1.0.6
@@ -63,10 +63,10 @@ dev_dependencies:
 
   # Code Generation
   riverpod_generator: ^2.4.0
-  build_runner: ^2.4.9
+  build_runner: ^2.4.13
   freezed: ^2.5.2
-  json_serializable: ^6.7.1
-  drift_dev: ^2.18.0
+  json_serializable: ^6.8.0
+  drift_dev: ^2.19.1
 
 flutter:
   uses-material-design: true
